@@ -1,0 +1,1132 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Character Sheet — D&D 5E</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;600;700;800&family=EB+Garamond:ital,wght@0,400;0,500;0,600;1,400&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --parchment:#f1e6ce;
+    --parchment-dark:#e6d7b3;
+    --parchment-darker:#dbc99e;
+    --ink:#2b2419;
+    --ink-soft:#4a4038;
+    --burgundy:#7a2e2e;
+    --burgundy-dark:#5c2222;
+    --gold:#a9782f;
+    --gold-light:#c99a49;
+    --forest:#3f5443;
+    --line:#c9b892;
+    --shadow: rgba(43,36,25,0.25);
+  }
+
+  *{box-sizing:border-box;}
+
+  body{
+    margin:0;
+    padding:0;
+    background:
+      radial-gradient(ellipse at top left, rgba(255,255,255,0.15), transparent 60%),
+      radial-gradient(ellipse at bottom right, rgba(0,0,0,0.06), transparent 60%),
+      var(--parchment);
+    color:var(--ink);
+    font-family:'EB Garamond', serif;
+    font-size:16px;
+    line-height:1.35;
+  }
+
+  .display{font-family:'Cinzel', serif;}
+  .mono{font-family:'JetBrains Mono', monospace;}
+
+  a{color:var(--burgundy);}
+
+  #toolbar{
+    position:sticky;
+    top:0;
+    z-index:50;
+    display:flex;
+    flex-wrap:wrap;
+    align-items:center;
+    gap:10px;
+    padding:10px 20px;
+    background:var(--ink);
+    color:var(--parchment);
+    box-shadow:0 2px 8px var(--shadow);
+  }
+  #toolbar .title{
+    font-family:'Cinzel',serif;
+    font-weight:700;
+    letter-spacing:0.06em;
+    font-size:15px;
+    margin-right:auto;
+    color:var(--gold-light);
+    text-transform:uppercase;
+  }
+  .btn{
+    font-family:'Cinzel', serif;
+    font-size:12px;
+    letter-spacing:0.06em;
+    text-transform:uppercase;
+    font-weight:600;
+    background:var(--burgundy);
+    color:#f1e6ce;
+    border:1px solid var(--gold-light);
+    border-radius:3px;
+    padding:8px 14px;
+    cursor:pointer;
+    transition:background 0.15s ease, transform 0.05s ease;
+  }
+  .btn:hover{background:var(--burgundy-dark);}
+  .btn:active{transform:translateY(1px);}
+  .btn.secondary{background:transparent; color:var(--parchment); border-color:#6b6250;}
+  .btn.secondary:hover{background:rgba(255,255,255,0.08);}
+  .btn.small{padding:4px 9px; font-size:10.5px;}
+  .btn.danger{background:#5c2222;}
+  #fileInput{display:none;}
+
+  #sheet{
+    max-width:1180px;
+    margin:26px auto 60px;
+    padding:0 20px;
+  }
+
+  /* header banner */
+  .banner{
+    background:linear-gradient(160deg, var(--burgundy), var(--burgundy-dark));
+    border:2px solid var(--gold);
+    border-radius:6px;
+    padding:22px 26px 18px;
+    color:var(--parchment);
+    position:relative;
+    overflow:hidden;
+    box-shadow:0 4px 14px var(--shadow);
+  }
+  .banner::before{
+    content:"";
+    position:absolute; inset:6px;
+    border:1px solid rgba(201,154,73,0.45);
+    border-radius:3px;
+    pointer-events:none;
+  }
+  .banner .namerow{
+    display:flex;
+    align-items:baseline;
+    gap:18px;
+    flex-wrap:wrap;
+  }
+  input.char-name{
+    font-family:'Cinzel', serif;
+    font-weight:700;
+    font-size:34px;
+    background:transparent;
+    border:none;
+    border-bottom:2px solid rgba(201,154,73,0.6);
+    color:#fbf3e2;
+    padding:2px 4px;
+    flex:1 1 320px;
+    min-width:220px;
+  }
+  input.char-name::placeholder{color:rgba(251,243,226,0.45);}
+  .inspiration{
+    display:flex;
+    align-items:center;
+    gap:6px;
+    font-family:'Cinzel',serif;
+    font-size:11px;
+    text-transform:uppercase;
+    letter-spacing:0.05em;
+    color:var(--gold-light);
+  }
+  .banner .metarow{
+    display:grid;
+    grid-template-columns:repeat(6, 1fr);
+    gap:14px 18px;
+    margin-top:16px;
+  }
+  .meta-field label{
+    display:block;
+    font-family:'Cinzel',serif;
+    font-size:9.5px;
+    letter-spacing:0.09em;
+    text-transform:uppercase;
+    color:var(--gold-light);
+    margin-bottom:3px;
+  }
+  .meta-field input{
+    width:100%;
+    background:rgba(0,0,0,0.15);
+    border:none;
+    border-bottom:1px solid rgba(201,154,73,0.5);
+    color:#fbf3e2;
+    font-family:'EB Garamond',serif;
+    font-size:15px;
+    padding:3px 4px;
+  }
+  .meta-field input::placeholder{color:rgba(251,243,226,0.35);}
+
+  .builder-card{margin-top:16px;}
+  .builder-row{
+    display:grid;
+    grid-template-columns:1.3fr 1.3fr 1.3fr 0.7fr 1fr;
+    gap:12px;
+    align-items:end;
+  }
+  @media(max-width:760px){ .builder-row{grid-template-columns:1fr 1fr;} }
+  .builder-btn-field{display:flex; align-items:flex-end;}
+  .builder-btn-field .btn{width:100%;}
+  .builder-hint{font-size:12.5px; color:var(--ink-soft); margin:10px 0 0;}
+  .racial-tag{
+    font-family:'JetBrains Mono',monospace;
+    font-size:9.5px;
+    color:var(--forest);
+    margin-left:5px;
+  }
+
+  /* layout grid */
+  .grid{
+    display:grid;
+    grid-template-columns:230px 1fr 300px;
+    gap:16px;
+    margin-top:16px;
+    align-items:start;
+  }
+  @media(max-width:980px){
+    .grid{grid-template-columns:1fr;}
+  }
+
+  .card{
+    background:var(--parchment-dark);
+    border:1px solid var(--line);
+    border-radius:5px;
+    padding:14px;
+    box-shadow:0 1px 4px var(--shadow);
+    margin-bottom:16px;
+  }
+  .card h2{
+    font-family:'Cinzel',serif;
+    font-size:12px;
+    letter-spacing:0.09em;
+    text-transform:uppercase;
+    color:var(--parchment);
+    background:var(--ink-soft);
+    margin:-14px -14px 12px;
+    padding:7px 14px;
+    border-radius:4px 4px 0 0;
+    border-bottom:2px solid var(--gold);
+  }
+  .card h2 .sub{
+    float:right;
+    color:var(--gold-light);
+    font-weight:500;
+  }
+
+  /* ability seals */
+  .abilities{display:flex; flex-direction:column; gap:12px;}
+  .seal{
+    display:flex;
+    align-items:center;
+    gap:12px;
+    background:var(--parchment);
+    border:1px solid var(--line);
+    border-radius:5px;
+    padding:8px 10px;
+  }
+  .seal .badge{
+    width:52px; height:52px;
+    border-radius:50%;
+    border:3px double var(--burgundy);
+    background:var(--parchment-dark);
+    display:flex; flex-direction:column;
+    align-items:center; justify-content:center;
+    flex-shrink:0;
+  }
+  .seal .badge .mod{
+    font-family:'JetBrains Mono',monospace;
+    font-weight:700;
+    font-size:17px;
+    color:var(--burgundy);
+    line-height:1;
+  }
+  .seal .badge .score-wrap{
+    display:flex; align-items:center; gap:2px;
+    margin-top:2px;
+  }
+  .seal .badge input.score{
+    width:24px;
+    text-align:center;
+    border:none;
+    background:transparent;
+    font-family:'JetBrains Mono',monospace;
+    font-size:11px;
+    color:var(--ink-soft);
+  }
+  .seal .info{flex:1;}
+  .seal .info label{
+    display:block;
+    font-family:'Cinzel',serif;
+    font-size:11px;
+    letter-spacing:0.08em;
+    text-transform:uppercase;
+    color:var(--ink-soft);
+  }
+  .seal .save-line{
+    display:flex; align-items:center; gap:5px;
+    font-size:12.5px;
+    margin-top:2px;
+    color:var(--ink-soft);
+  }
+  .seal .save-line .save-mod{font-family:'JetBrains Mono',monospace;}
+
+  .prof-block{
+    display:flex; justify-content:space-between; align-items:center;
+    margin-bottom:14px;
+    background:var(--parchment);
+    border:1px solid var(--line);
+    border-radius:5px;
+    padding:8px 12px;
+  }
+  .prof-block .label{font-family:'Cinzel',serif; font-size:11px; text-transform:uppercase; letter-spacing:0.06em; color:var(--ink-soft);}
+  .prof-block .val{font-family:'JetBrains Mono',monospace; font-weight:700; font-size:18px; color:var(--burgundy);}
+
+  /* skills */
+  .skill-row{
+    display:grid;
+    grid-template-columns:20px 20px 34px 1fr;
+    align-items:center;
+    gap:7px;
+    padding:3px 2px;
+    font-size:14px;
+    border-bottom:1px dotted var(--line);
+  }
+  .skill-row:last-child{border-bottom:none;}
+  .skill-row .mod{font-family:'JetBrains Mono',monospace; font-weight:700; text-align:right; color:var(--burgundy);}
+  .skill-row .abbr{font-size:10px; color:var(--ink-soft); font-family:'Cinzel',serif;}
+  .skill-row input[type=checkbox]{accent-color:var(--burgundy);}
+
+  /* combat stats */
+  .combat-row{
+    display:grid;
+    grid-template-columns:repeat(4,1fr);
+    gap:10px;
+    margin-bottom:12px;
+  }
+  .stat-box{
+    background:var(--parchment);
+    border:1px solid var(--line);
+    border-radius:5px;
+    text-align:center;
+    padding:8px 4px;
+  }
+  .stat-box label{
+    display:block;
+    font-family:'Cinzel',serif;
+    font-size:9px;
+    letter-spacing:0.06em;
+    text-transform:uppercase;
+    color:var(--ink-soft);
+    margin-bottom:3px;
+  }
+  .stat-box input, .stat-box .computed{
+    width:100%;
+    border:none;
+    background:transparent;
+    text-align:center;
+    font-family:'JetBrains Mono',monospace;
+    font-weight:700;
+    font-size:19px;
+    color:var(--burgundy);
+  }
+  .hp-row{display:grid; grid-template-columns:1fr 1fr 1fr; gap:10px; margin-bottom:12px;}
+  .deathsaves{display:flex; gap:22px; align-items:center; margin-bottom:12px; background:var(--parchment); border:1px solid var(--line); border-radius:5px; padding:8px 12px;}
+  .deathsaves .grp{display:flex; align-items:center; gap:6px;}
+  .deathsaves label{font-family:'Cinzel',serif; font-size:10.5px; text-transform:uppercase; color:var(--ink-soft);}
+  .deathsaves input{accent-color:var(--burgundy);}
+
+  table.rows-table{width:100%; border-collapse:collapse; font-size:13.5px;}
+  table.rows-table th{
+    font-family:'Cinzel',serif; font-size:9.5px; text-transform:uppercase; letter-spacing:0.04em;
+    color:var(--ink-soft); text-align:left; padding:3px 4px; border-bottom:1px solid var(--gold);
+  }
+  table.rows-table td{padding:3px 4px; border-bottom:1px dotted var(--line);}
+  table.rows-table input, table.rows-table select{
+    width:100%; border:none; background:transparent; font-family:'EB Garamond',serif; font-size:13.5px; padding:2px;
+  }
+  table.rows-table input[type=checkbox]{width:auto; accent-color:var(--burgundy);}
+
+  textarea{
+    width:100%;
+    border:1px solid var(--line);
+    background:var(--parchment);
+    border-radius:4px;
+    font-family:'EB Garamond',serif;
+    font-size:14.5px;
+    padding:8px;
+    resize:vertical;
+    color:var(--ink);
+  }
+  textarea:focus, input:focus, select:focus{outline:2px solid var(--gold); outline-offset:1px;}
+
+  .field label{
+    display:block;
+    font-family:'Cinzel',serif;
+    font-size:10.5px;
+    text-transform:uppercase;
+    letter-spacing:0.06em;
+    color:var(--ink-soft);
+    margin:8px 0 3px;
+  }
+  .field:first-child label{margin-top:0;}
+
+  .plain-input{
+    width:100%;
+    border:1px solid var(--line);
+    background:var(--parchment);
+    border-radius:4px;
+    font-family:'EB Garamond',serif;
+    font-size:14.5px;
+    padding:6px 8px;
+  }
+
+  .currency-row{display:grid; grid-template-columns:repeat(5,1fr); gap:8px; margin-top:6px;}
+  .currency-row .cur{text-align:center;}
+  .currency-row label{font-family:'JetBrains Mono',monospace; font-size:11px; color:var(--ink-soft);}
+  .currency-row input{width:100%; text-align:center; border:1px solid var(--line); background:var(--parchment); border-radius:3px; padding:4px;}
+
+  .row-actions{margin-top:6px;}
+
+  .spell-meta{display:grid; grid-template-columns:1fr 1fr 1fr; gap:10px; margin-bottom:12px;}
+
+  #printArea .print-textarea{display:none;}
+
+  footer.hint{
+    max-width:1180px;
+    margin:0 auto 60px;
+    padding:0 20px;
+    font-size:13px;
+    color:var(--ink-soft);
+  }
+
+  @media print{
+    #toolbar{display:none;}
+    body{background:#fff;}
+    #sheet{max-width:100%; margin:0; padding:0 8mm;}
+    .card, .banner, .seal, .stat-box, .prof-block, .deathsaves{box-shadow:none;}
+    .banner{background:#fff !important; color:#000; border:2px solid #000;}
+    .banner input, .meta-field input{color:#000 !important; background:transparent !important;}
+    .banner .namerow input.char-name{color:#000 !important;}
+    .card h2{background:#000 !important; color:#fff !important;}
+    .seal .badge{border-color:#000;}
+    .seal .badge .mod{color:#000;}
+    textarea{border:1px solid #999;}
+    footer.hint, .row-actions .btn.small{display:none !important;}
+    body.printing textarea{display:none;}
+    body.printing .print-textarea{
+      display:block;
+      white-space:pre-wrap;
+      border:1px solid #999;
+      border-radius:4px;
+      padding:8px;
+      font-family:'EB Garamond',serif;
+      font-size:13px;
+      min-height:40px;
+    }
+    a[href]{color:#000; text-decoration:none;}
+  }
+</style>
+</head>
+<body>
+
+<div id="toolbar">
+  <span class="title">⚔ Character Sheet — 5E</span>
+  <button class="btn secondary" id="btnNew">New Character</button>
+  <button class="btn secondary" id="btnLoad">Load File</button>
+  <input type="file" id="fileInput" accept="application/json">
+  <button class="btn" id="btnSave">Save Character (.json)</button>
+  <button class="btn" id="btnPdf">Download as PDF</button>
+</div>
+
+<div id="sheet">
+
+  <div class="banner">
+    <div class="namerow">
+      <input class="char-name" name="charName" placeholder="Character Name">
+      <label class="inspiration"><input type="checkbox" name="inspiration"> Inspiration</label>
+    </div>
+    <div class="metarow">
+      <div class="meta-field"><label>Class &amp; Level</label><input name="classLevel" placeholder="Ranger 5"></div>
+      <div class="meta-field"><label>Background</label><input name="background" placeholder="Outlander"></div>
+      <div class="meta-field"><label>Race / Species</label><input name="race" placeholder="Half-Elf"></div>
+      <div class="meta-field"><label>Alignment</label><input name="alignment" placeholder="Neutral Good"></div>
+      <div class="meta-field"><label>Player Name</label><input name="playerName" placeholder=""></div>
+      <div class="meta-field"><label>Experience</label><input name="xp" placeholder="0"></div>
+    </div>
+  </div>
+
+  <div class="card builder-card">
+    <h2>Character Builder <span class="sub">choose race, class &amp; background — the rest fills in for you</span></h2>
+    <div class="builder-row">
+      <div class="field">
+        <label>Race</label>
+        <select class="plain-input" id="buildRace" name="buildRace">
+          <option value="">— choose —</option>
+          <option value="vedalken">Vedalken</option>
+        </select>
+      </div>
+      <div class="field">
+        <label>Class</label>
+        <select class="plain-input" id="buildClass" name="buildClass">
+          <option value="">— choose —</option>
+          <option value="artificer">Artificer</option>
+        </select>
+      </div>
+      <div class="field">
+        <label>Background</label>
+        <select class="plain-input" id="buildBackground" name="buildBackground">
+          <option value="">— choose —</option>
+          <option value="simicScientist">Simic Scientist</option>
+        </select>
+      </div>
+      <div class="field">
+        <label>Level</label>
+        <input class="plain-input mono" id="buildLevel" name="buildLevel" type="number" min="1" max="20" value="1">
+      </div>
+      <div class="field builder-btn-field">
+        <button class="btn small" id="btnApplyBuild" type="button">Apply / Level Up</button>
+      </div>
+    </div>
+    <p class="builder-hint">Fills in ability score bonuses, proficiencies, hit dice, speed, spell slots and features.
+      Ability score <em>rolls</em>, spell choices and skill choices from a list are left for you to decide — auto-picked
+      defaults are marked below so you know what to double check.</p>
+  </div>
+
+  <div class="grid">
+
+    <!-- LEFT COLUMN: abilities -->
+    <div>
+      <div class="card">
+        <h2>Ability Scores</h2>
+        <div class="abilities" id="abilitiesWrap"></div>
+      </div>
+
+      <div class="prof-block">
+        <span class="label">Proficiency Bonus</span>
+        <span class="val computed" id="profBonus">+2</span>
+      </div>
+
+      <div class="card">
+        <h2>Skills</h2>
+        <div id="skillsWrap"></div>
+      </div>
+
+      <div class="card">
+        <h2>Passive Perception <span class="sub computed" id="passivePerception">10</span></h2>
+        <div class="field">
+          <label>Other Proficiencies &amp; Languages</label>
+          <textarea name="profsLanguages" rows="5" placeholder="Armor, weapons, tools, languages..."></textarea>
+        </div>
+      </div>
+    </div>
+
+    <!-- MIDDLE COLUMN: combat -->
+    <div>
+      <div class="card">
+        <h2>Combat</h2>
+        <div class="combat-row">
+          <div class="stat-box"><label>Armor Class</label><input name="ac" class="mono"></div>
+          <div class="stat-box"><label>Initiative</label><span class="computed" id="initiative">+0</span></div>
+          <div class="stat-box"><label>Speed</label><input name="speed" class="mono" placeholder="30 ft"></div>
+          <div class="stat-box"><label>Hit Dice</label><input name="hitDice" class="mono" placeholder="5d10"></div>
+        </div>
+        <div class="hp-row">
+          <div class="stat-box"><label>Max HP</label><input name="hpMax" class="mono"></div>
+          <div class="stat-box"><label>Current HP</label><input name="hpCurrent" class="mono"></div>
+          <div class="stat-box"><label>Temp HP</label><input name="hpTemp" class="mono"></div>
+        </div>
+        <div class="deathsaves">
+          <div class="grp"><label>Successes</label>
+            <input type="checkbox" name="ds_s1"><input type="checkbox" name="ds_s2"><input type="checkbox" name="ds_s3">
+          </div>
+          <div class="grp"><label>Failures</label>
+            <input type="checkbox" name="ds_f1"><input type="checkbox" name="ds_f2"><input type="checkbox" name="ds_f3">
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <h2>Attacks &amp; Cantrips</h2>
+        <table class="rows-table" id="attacksTable">
+          <thead><tr><th style="width:38%">Name</th><th style="width:18%">Bonus</th><th>Damage / Type</th><th style="width:24px"></th></tr></thead>
+          <tbody></tbody>
+        </table>
+        <div class="row-actions"><button class="btn small secondary" id="addAttack">+ Add Row</button></div>
+      </div>
+
+      <div class="card">
+        <h2>Equipment</h2>
+        <div class="currency-row">
+          <div class="cur"><label>CP</label><input name="cp" class="mono"></div>
+          <div class="cur"><label>SP</label><input name="sp" class="mono"></div>
+          <div class="cur"><label>EP</label><input name="ep" class="mono"></div>
+          <div class="cur"><label>GP</label><input name="gp" class="mono"></div>
+          <div class="cur"><label>PP</label><input name="pp" class="mono"></div>
+        </div>
+        <div class="field">
+          <label>Inventory</label>
+          <textarea name="equipment" rows="7" placeholder="Weapons, armor, gear, treasure..."></textarea>
+        </div>
+      </div>
+
+      <div class="card">
+        <h2>Features &amp; Traits</h2>
+        <textarea name="features" rows="9" placeholder="Class features, racial traits, feats..."></textarea>
+      </div>
+    </div>
+
+    <!-- RIGHT COLUMN: personality + spells -->
+    <div>
+      <div class="card">
+        <h2>Personality</h2>
+        <div class="field"><label>Traits</label><textarea name="pTraits" rows="3"></textarea></div>
+        <div class="field"><label>Ideals</label><textarea name="pIdeals" rows="3"></textarea></div>
+        <div class="field"><label>Bonds</label><textarea name="pBonds" rows="3"></textarea></div>
+        <div class="field"><label>Flaws</label><textarea name="pFlaws" rows="3"></textarea></div>
+      </div>
+
+      <div class="card">
+        <h2>Spellcasting</h2>
+        <div class="spell-meta">
+          <div class="field"><label>Class</label><input class="plain-input" name="spellClass"></div>
+          <div class="field">
+            <label>Ability</label>
+            <select class="plain-input" name="spellAbility">
+              <option value="">—</option>
+              <option value="int">Intelligence</option>
+              <option value="wis">Wisdom</option>
+              <option value="cha">Charisma</option>
+            </select>
+          </div>
+          <div class="field"><label>Save DC / Attack</label>
+            <div class="computed mono" id="spellDcAtk" style="padding:6px 0; font-weight:700; color:var(--burgundy);">— / —</div>
+          </div>
+        </div>
+        <table class="rows-table" id="slotsTable">
+          <thead><tr><th style="width:20%">Level</th><th style="width:40%">Slots Total</th><th>Expended</th></tr></thead>
+          <tbody></tbody>
+        </table>
+        <div class="row-actions" style="margin-bottom:10px;"></div>
+        <table class="rows-table" id="spellsTable">
+          <thead><tr><th style="width:14%">Lvl</th><th style="width:38%">Spell</th><th style="width:16%">Prep?</th><th>Notes</th><th style="width:24px"></th></tr></thead>
+          <tbody></tbody>
+        </table>
+        <div class="row-actions"><button class="btn small secondary" id="addSpell">+ Add Spell</button></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<footer class="hint">
+  Data is never uploaded anywhere — everything stays in this browser tab. Use <strong>Save Character</strong> to download a
+  <code>.json</code> file you can re-open later with <strong>Load File</strong>, and <strong>Download as PDF</strong> to print
+  or save a shareable PDF copy.
+</footer>
+
+<script>
+const ABILITIES = [
+  {key:'str', name:'Strength'},
+  {key:'dex', name:'Dexterity'},
+  {key:'con', name:'Constitution'},
+  {key:'int', name:'Intelligence'},
+  {key:'wis', name:'Wisdom'},
+  {key:'cha', name:'Charisma'}
+];
+
+const SKILLS = [
+  {key:'acrobatics', name:'Acrobatics', ab:'dex'},
+  {key:'animalHandling', name:'Animal Handling', ab:'wis'},
+  {key:'arcana', name:'Arcana', ab:'int'},
+  {key:'athletics', name:'Athletics', ab:'str'},
+  {key:'deception', name:'Deception', ab:'cha'},
+  {key:'history', name:'History', ab:'int'},
+  {key:'insight', name:'Insight', ab:'wis'},
+  {key:'intimidation', name:'Intimidation', ab:'cha'},
+  {key:'investigation', name:'Investigation', ab:'int'},
+  {key:'medicine', name:'Medicine', ab:'wis'},
+  {key:'nature', name:'Nature', ab:'int'},
+  {key:'perception', name:'Perception', ab:'wis'},
+  {key:'performance', name:'Performance', ab:'cha'},
+  {key:'persuasion', name:'Persuasion', ab:'cha'},
+  {key:'religion', name:'Religion', ab:'int'},
+  {key:'sleightOfHand', name:'Sleight of Hand', ab:'dex'},
+  {key:'stealth', name:'Stealth', ab:'dex'},
+  {key:'survival', name:'Survival', ab:'wis'}
+];
+
+function mod(score){
+  const s = parseInt(score,10);
+  if(isNaN(s)) return 0;
+  return Math.floor((s-10)/2);
+}
+function fmt(n){ return (n>=0?'+':'') + n; }
+
+function profBonusFor(classLevelStr){
+  const m = (classLevelStr||'').match(/(\d+)/);
+  const lvl = m ? parseInt(m[1],10) : 1;
+  if(lvl>=17) return 6;
+  if(lvl>=13) return 5;
+  if(lvl>=9) return 4;
+  if(lvl>=5) return 3;
+  return 2;
+}
+
+// ---------- build ability seals ----------
+const abilitiesWrap = document.getElementById('abilitiesWrap');
+ABILITIES.forEach(a=>{
+  const seal = document.createElement('div');
+  seal.className='seal';
+  seal.innerHTML = `
+    <div class="badge">
+      <span class="mod" data-mod="${a.key}">+0</span>
+      <span class="score-wrap"><input class="score" type="text" name="score_${a.key}" value="10" maxlength="2"></span>
+    </div>
+    <div class="info">
+      <label>${a.name}<span class="racial-tag" data-racialtag="${a.key}"></span></label>
+      <input type="hidden" name="racialBonus_${a.key}" value="0">
+      <div class="save-line">
+        <input type="checkbox" name="save_prof_${a.key}">
+        <span>Save</span>
+        <span class="save-mod" data-save="${a.key}">+0</span>
+      </div>
+    </div>`;
+  abilitiesWrap.appendChild(seal);
+});
+
+// ---------- build skills ----------
+const skillsWrap = document.getElementById('skillsWrap');
+SKILLS.forEach(s=>{
+  const row = document.createElement('div');
+  row.className='skill-row';
+  row.innerHTML = `
+    <input type="checkbox" name="skill_prof_${s.key}" title="Proficient">
+    <input type="checkbox" name="skill_exp_${s.key}" title="Expertise">
+    <span class="mod" data-skillmod="${s.key}">+0</span>
+    <span>${s.name} <span class="abbr">(${s.ab.toUpperCase()})</span></span>`;
+  skillsWrap.appendChild(row);
+});
+
+// ---------- dynamic tables ----------
+function makeAttackRow(vals={}){
+  const tr = document.createElement('tr');
+  tr.innerHTML = `
+    <td><input type="text" class="atk-name" value="${vals.name||''}"></td>
+    <td><input type="text" class="atk-bonus" value="${vals.bonus||''}"></td>
+    <td><input type="text" class="atk-dmg" value="${vals.dmg||''}"></td>
+    <td><button class="btn small danger" type="button" onclick="this.closest('tr').remove()">✕</button></td>`;
+  return tr;
+}
+function makeSpellRow(vals={}){
+  const tr = document.createElement('tr');
+  const lvl = vals.level||'0';
+  let opts = '';
+  ['C','1','2','3','4','5','6','7','8','9'].forEach(l=>{
+    const v = l==='C' ? '0' : l;
+    opts += `<option value="${v}" ${v===lvl?'selected':''}>${l}</option>`;
+  });
+  tr.innerHTML = `
+    <td><select class="spell-level">${opts}</select></td>
+    <td><input type="text" class="spell-name" value="${vals.name||''}"></td>
+    <td style="text-align:center"><input type="checkbox" class="spell-prep" ${vals.prep?'checked':''}></td>
+    <td><input type="text" class="spell-notes" value="${vals.notes||''}"></td>
+    <td><button class="btn small danger" type="button" onclick="this.closest('tr').remove()">✕</button></td>`;
+  return tr;
+}
+
+const attacksBody = document.querySelector('#attacksTable tbody');
+const spellsBody = document.querySelector('#spellsTable tbody');
+document.getElementById('addAttack').onclick = ()=> attacksBody.appendChild(makeAttackRow());
+document.getElementById('addSpell').onclick = ()=> spellsBody.appendChild(makeSpellRow());
+for(let i=0;i<3;i++) attacksBody.appendChild(makeAttackRow());
+
+// spell slots table (fixed levels 1-9)
+const slotsBody = document.querySelector('#slotsTable tbody');
+for(let lvl=1; lvl<=9; lvl++){
+  const tr = document.createElement('tr');
+  tr.innerHTML = `
+    <td>Level ${lvl}</td>
+    <td><input type="text" class="mono" name="slotTotal_${lvl}"></td>
+    <td><input type="text" class="mono" name="slotExpended_${lvl}"></td>`;
+  slotsBody.appendChild(tr);
+}
+
+// ---------- recalculation ----------
+function recalc(){
+  const scores = {};
+  ABILITIES.forEach(a=>{
+    const el = document.querySelector(`[name="score_${a.key}"]`);
+    const bonusEl = document.querySelector(`[name="racialBonus_${a.key}"]`);
+    const bonus = bonusEl ? (parseInt(bonusEl.value,10)||0) : 0;
+    const base = parseInt(el.value,10);
+    scores[a.key] = mod((isNaN(base)?10:base) + bonus);
+    document.querySelector(`[data-mod="${a.key}"]`).textContent = fmt(scores[a.key]);
+    const tag = document.querySelector(`[data-racialtag="${a.key}"]`);
+    if(tag) tag.textContent = bonus ? `(${fmt(bonus)} racial)` : '';
+  });
+
+  const classLevel = document.querySelector('[name="classLevel"]').value;
+  const pb = profBonusFor(classLevel);
+  document.getElementById('profBonus').textContent = fmt(pb);
+
+  ABILITIES.forEach(a=>{
+    const prof = document.querySelector(`[name="save_prof_${a.key}"]`).checked;
+    const val = scores[a.key] + (prof?pb:0);
+    document.querySelector(`[data-save="${a.key}"]`).textContent = fmt(val);
+  });
+
+  let perceptionMod = 0;
+  SKILLS.forEach(s=>{
+    const prof = document.querySelector(`[name="skill_prof_${s.key}"]`).checked;
+    const exp = document.querySelector(`[name="skill_exp_${s.key}"]`).checked;
+    let bonus = scores[s.ab];
+    if(exp) bonus += pb*2;
+    else if(prof) bonus += pb;
+    document.querySelector(`[data-skillmod="${s.key}"]`).textContent = fmt(bonus);
+    if(s.key==='perception') perceptionMod = bonus;
+  });
+  document.getElementById('passivePerception').textContent = 10 + perceptionMod;
+
+  document.getElementById('initiative').textContent = fmt(scores.dex);
+
+  const spellAbility = document.querySelector('[name="spellAbility"]').value;
+  const dcEl = document.getElementById('spellDcAtk');
+  if(spellAbility && scores[spellAbility]!==undefined){
+    const dc = 8 + pb + scores[spellAbility];
+    const atk = pb + scores[spellAbility];
+    dcEl.textContent = `DC ${dc} / ${fmt(atk)}`;
+  } else {
+    dcEl.textContent = '— / —';
+  }
+}
+
+document.getElementById('sheet').addEventListener('input', recalc);
+document.getElementById('sheet').addEventListener('change', recalc);
+
+// ---------- character builder: race / class / background data ----------
+const AUTO_START = '===== Auto-filled from Race / Class / Background (edit freely) =====';
+const AUTO_END   = '===== End auto-filled section — your notes below =====';
+
+function setAutoBlock(textareaEl, content){
+  const start = textareaEl.value.indexOf(AUTO_START);
+  const end = textareaEl.value.indexOf(AUTO_END);
+  const block = `${AUTO_START}\n${content.trim()}\n${AUTO_END}`;
+  if(start !== -1 && end !== -1){
+    const before = textareaEl.value.slice(0, start);
+    const after = textareaEl.value.slice(end + AUTO_END.length);
+    textareaEl.value = (before + block + after).trim();
+  } else {
+    const rest = textareaEl.value.trim();
+    textareaEl.value = rest ? `${block}\n\n${rest}` : block;
+  }
+}
+
+const RACES = {
+  vedalken: {
+    name: 'Vedalken',
+    speed: '30 ft',
+    asi: {int:2, wis:1},
+    languages: 'Common, Vedalken, +1 language of your choice',
+    skillChoice: {options:['Arcana','History','Investigation','Medicine','Performance','Sleight of Hand'], defaultPick:'history', label:'Tireless Precision skill'},
+    tool: "Alchemist's Supplies (or another tool of your choice)",
+    features: [
+      "Vedalken Dispassion: Advantage on Intelligence, Wisdom, and Charisma saving throws.",
+      "Tireless Precision: Proficient in {SKILL} and {TOOL}. When you make an ability check with either, roll a d4 and add it to the total (a rolled bonus — apply it yourself at the table).",
+      "Partially Amphibious: You can breathe underwater for up to 1 hour per long rest.",
+      "Ability Score Increase: +2 Intelligence, +1 Wisdom (already applied to your modifiers above)."
+    ]
+  }
+};
+
+const CLASSES = {
+  artificer: {
+    name: 'Artificer',
+    hitDie: 8,
+    saves: ['con','int'],
+    armor: 'Light armor, medium armor, shields',
+    weapons: 'Simple weapons',
+    tools: "Thieves' tools, tinker's tools, one artisan's tool of your choice",
+    skillChoice: {options:['Arcana','History','Investigation','Medicine','Nature','Perception','Sleight of Hand'], count:2, defaultPicks:['investigation','perception'], label:'Artificer skill choices'},
+    spellAbility: 'int',
+    features: [
+      {lvl:1, text:"Magical Tinkering: As an action, touch a Tiny nonmagical object and give it a minor magical property (light, sound, sensor message, or the appearance of a mystical mark)."},
+      {lvl:1, text:"Spellcasting: Intelligence-based, prepared caster. Requires thieves'/artisan's tools in hand to cast."},
+      {lvl:2, text:"Infuse Item: Learn artificer infusions; imbue up to your limit of mundane items with magic after a long rest."},
+      {lvl:3, text:"Artificer Specialist: Choose a subclass (Alchemist, Armorer, Artillerist, or Battle Smith)."},
+      {lvl:3, text:"The Right Tool for the Job: Spend 1 hour to magically create one set of artisan's tools in a nearby unoccupied space."},
+      {lvl:4, text:"Ability Score Improvement."},
+      {lvl:6, text:"Tool Expertise: Double your proficiency bonus for ability checks with tools you're proficient in."},
+      {lvl:6, text:"Artificer Specialist feature."},
+      {lvl:7, text:"Flash of Genius: Reaction to add your Intelligence modifier to an ability check or saving throw made by you or a creature within 30 ft."},
+      {lvl:8, text:"Ability Score Improvement."},
+      {lvl:8, text:"Artificer Specialist feature."},
+      {lvl:10, text:"Magic Item Adept: Craft uncommon magic items twice as fast, and attune to up to 4 magic items."},
+      {lvl:11, text:"Spell-Storing Item: Store a 1st- or 2nd-level spell in an object after a long rest for allies to use."},
+      {lvl:12, text:"Ability Score Improvement."},
+      {lvl:14, text:"Magic Item Savant: Ignore class/race/level requirements for attuning magic items; attune to up to 5."},
+      {lvl:15, text:"Artificer Specialist feature."},
+      {lvl:16, text:"Ability Score Improvement."},
+      {lvl:18, text:"Magic Item Master: Attune to up to 6 magic items."},
+      {lvl:19, text:"Ability Score Improvement (or a feat)."},
+      {lvl:20, text:"Soul of Artifice: +1 to all saving throws per attuned magic item; end an infusion to drop to 1 HP instead of 0."}
+    ],
+    // [cantrips, {slotLevel: count}]
+    slots: {
+      1:{cantrips:2, slots:{1:2}},
+      2:{cantrips:2, slots:{1:2}},
+      3:{cantrips:2, slots:{1:3}},
+      4:{cantrips:2, slots:{1:3}},
+      5:{cantrips:2, slots:{1:4,2:2}},
+      6:{cantrips:2, slots:{1:4,2:2}},
+      7:{cantrips:2, slots:{1:4,2:3}},
+      8:{cantrips:2, slots:{1:4,2:3}},
+      9:{cantrips:2, slots:{1:4,2:3,3:2}},
+      10:{cantrips:3, slots:{1:4,2:3,3:2}},
+      11:{cantrips:3, slots:{1:4,2:3,3:3}},
+      12:{cantrips:3, slots:{1:4,2:3,3:3}},
+      13:{cantrips:3, slots:{1:4,2:3,3:3,4:1}},
+      14:{cantrips:3, slots:{1:4,2:3,3:3,4:1}},
+      15:{cantrips:3, slots:{1:4,2:3,3:3,4:2}},
+      16:{cantrips:3, slots:{1:4,2:3,3:3,4:2}},
+      17:{cantrips:3, slots:{1:4,2:3,3:3,4:3,5:1}},
+      18:{cantrips:3, slots:{1:4,2:3,3:3,4:3,5:1}},
+      19:{cantrips:3, slots:{1:4,2:3,3:3,4:3,5:2}},
+      20:{cantrips:3, slots:{1:4,2:3,3:3,4:3,5:2}}
+    }
+  }
+};
+
+const BACKGROUNDS = {
+  simicScientist: {
+    name: 'Simic Scientist',
+    skills: ['arcana','medicine'],
+    languages: '2 languages of your choice',
+    equipment: "A Simic insignia, commoner's clothes, a book of research notes, an ink pen, a bottle of squid ink, a flask of oil, a vial of acid, a vial of fish scales, a vial of seaweed, a vial of jellyfish stingers, a glass bottle of unidentified slime, and a belt pouch containing 10 gp.",
+    startingGp: 10,
+    features: [
+      "Researcher: When you try to recall or learn a magical or scientific fact you don't already know, you know where or from whom you can obtain it — usually a Simic lab, Izzet facility, library, university, or independent scholar.",
+      "You belong to a Simic research clade or project (pick or roll one: Hull, Fin, Gyre, Guardian Project, Crypsis Project, or independent research)."
+    ]
+  }
+};
+
+function checkSkill(key, on){
+  const el = document.querySelector(`[name="skill_prof_${key}"]`);
+  if(el) el.checked = on;
+}
+function checkSave(key, on){
+  const el = document.querySelector(`[name="save_prof_${key}"]`);
+  if(el) el.checked = on;
+}
+function setFieldIfNamed(name, val){
+  const el = document.querySelector(`#sheet [name="${name}"]`);
+  if(el) el.value = val;
+}
+
+function applyBuild(){
+  const raceKey = document.getElementById('buildRace').value;
+  const classKey = document.getElementById('buildClass').value;
+  const bgKey = document.getElementById('buildBackground').value;
+  const level = Math.max(1, Math.min(20, parseInt(document.getElementById('buildLevel').value,10) || 1));
+
+  const race = RACES[raceKey];
+  const cls = CLASSES[classKey];
+  const bg = BACKGROUNDS[bgKey];
+
+  const featureLines = [];
+
+  // ---- Race ----
+  ABILITIES.forEach(a=>{
+    const bonusEl = document.querySelector(`[name="racialBonus_${a.key}"]`);
+    if(bonusEl) bonusEl.value = (race && race.asi[a.key]) ? race.asi[a.key] : 0;
+  });
+  if(race){
+    setFieldIfNamed('race', race.name);
+    setFieldIfNamed('speed', race.speed);
+    checkSkill(race.skillChoice.defaultPick, true);
+    const skillLabel = SKILLS.find(s=>s.key===race.skillChoice.defaultPick).name;
+    featureLines.push(`RACE — ${race.name}`);
+    race.features.forEach(f=>{
+      featureLines.push('• ' + f.replace('{SKILL}', skillLabel).replace('{TOOL}', race.tool));
+    });
+    featureLines.push(`Languages: ${race.languages}`);
+    featureLines.push('');
+  }
+
+  // ---- Class ----
+  if(cls){
+    setFieldIfNamed('classLevel', `${cls.name} ${level}`);
+    setFieldIfNamed('hitDice', `${level}d${cls.hitDie}`);
+    cls.saves.forEach(k=>checkSave(k,true));
+    (cls.skillChoice.defaultPicks||[]).forEach(k=>checkSkill(k,true));
+    setFieldIfNamed('spellClass', cls.name);
+    setFieldIfNamed('spellAbility', cls.spellAbility);
+
+    featureLines.push(`CLASS — ${cls.name} (Level ${level})`);
+    cls.features.filter(f=>f.lvl<=level).forEach(f=>featureLines.push(`• (Lvl ${f.lvl}) ${f.text}`));
+    const skillOptNames = cls.skillChoice.options.join(', ');
+    featureLines.push(`Skill choices (pick ${cls.skillChoice.count} from: ${skillOptNames}) — defaulted to ${cls.skillChoice.defaultPicks.map(k=>SKILLS.find(s=>s.key===k).name).join(' & ')}, change if you like.`);
+    featureLines.push('');
+
+    // spell slots
+    const tbl = cls.slots[level];
+    for(let l=1; l<=9; l++){
+      const totalEl = document.querySelector(`[name="slotTotal_${l}"]`);
+      if(totalEl) totalEl.value = (tbl.slots[l] || '');
+    }
+    featureLines.push(`Cantrips known: ${tbl.cantrips} (choose from the Artificer spell list).`);
+    featureLines.push('');
+  }
+
+  // ---- Background ----
+  if(bg){
+    setFieldIfNamed('background', bg.name);
+    bg.skills.forEach(k=>checkSkill(k,true));
+    featureLines.push(`BACKGROUND — ${bg.name}`);
+    bg.features.forEach(f=>featureLines.push('• ' + f));
+    featureLines.push(`Languages: ${bg.languages}`);
+
+    const gpEl = document.querySelector('[name="gp"]');
+    if(gpEl && !gpEl.value) gpEl.value = bg.startingGp;
+    const equipTa = document.querySelector('[name="equipment"]');
+    if(equipTa){
+      setAutoBlock(equipTa, `${bg.name} starting gear: ${bg.equipment}\n\nPlus your ${cls?cls.name:'class'} starting equipment (choose per class options).`);
+    }
+  }
+
+  const featuresTa = document.querySelector('[name="features"]');
+  if(featuresTa) setAutoBlock(featuresTa, featureLines.join('\n'));
+
+  const profsTa = document.querySelector('[name="profsLanguages"]');
+  if(profsTa && cls && race){
+    setAutoBlock(profsTa, [
+      `Armor: ${cls.armor}`,
+      `Weapons: ${cls.weapons}`,
+      `Tools: ${cls.tools}, ${race.tool} (racial)`,
+      `Saving Throws: ${cls.saves.map(k=>k.toUpperCase()).join(', ')}`,
+      `Languages: ${race.languages}; ${bg?bg.languages+' (background)':''}`
+    ].join('\n'));
+  }
+
+  recalc();
+}
+
+document.getElementById('btnApplyBuild').onclick = applyBuild;
+['buildRace','buildClass','buildBackground'].forEach(id=>{
+  document.getElementById(id).addEventListener('change', applyBuild);
+});
+
+// ---------- save / load ----------
+function gatherData(){
+  const fields = {};
+  document.querySelectorAll('#sheet [name]').forEach(el=>{
+    if(el.type==='checkbox') fields[el.name] = el.checked;
+    else fields[el.name] = el.value;
+  });
+  const attacks = [...attacksBody.querySelectorAll('tr')].map(tr=>({
+    name: tr.querySelector('.atk-name').value,
+    bonus: tr.querySelector('.atk-bonus').value,
+    dmg: tr.querySelector('.atk-dmg').value
+  }));
+  const spells = [...spellsBody.querySelectorAll('tr')].map(tr=>({
+    level: tr.querySelector('.spell-level').value,
+    name: tr.querySelector('.spell-name').value,
+    prep: tr.querySelector('.spell-prep').checked,
+    notes: tr.querySelector('.spell-notes').value
+  }));
+  return {fields, attacks, spells, _type:'dnd5e-character', _version:1};
+}
+
+function escapeAttr(s){
+  return (window.CSS && CSS.escape) ? CSS.escape(s) : String(s).replace(/["\\\]]/g, '\\$&');
+}
+
+function loadData(data){
+  if(!data || !data.fields) return;
+  Object.entries(data.fields).forEach(([name,val])=>{
+    const el = document.querySelector(`#sheet [name="${escapeAttr(name)}"]`);
+    if(!el) return;
+    if(el.type==='checkbox') el.checked = !!val;
+    else el.value = val;
+  });
+  attacksBody.innerHTML='';
+  (data.attacks && data.attacks.length ? data.attacks : [{},{},{}]).forEach(v=>attacksBody.appendChild(makeAttackRow(v)));
+  spellsBody.innerHTML='';
+  (data.spells||[]).forEach(v=>spellsBody.appendChild(makeSpellRow(v)));
+  recalc();
+}
+
+document.getElementById('btnSave').onclick = ()=>{
+  const data = gatherData();
+  const name = (data.fields.charName||'character').trim().toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/(^-|-$)/g,'') || 'character';
+  const blob = new Blob([JSON.stringify(data,null,2)], {type:'application/json'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = `${name}.json`;
+  document.body.appendChild(a); a.click(); a.remove();
+  URL.revokeObjectURL(url);
+};
+
+document.getElementById('btnLoad').onclick = ()=> document.getElementById('fileInput').click();
+document.getElementById('fileInput').onchange = (e)=>{
+  const file = e.target.files[0];
+  if(!file) return;
+  const reader = new FileReader();
+  reader.onload = ()=>{
+    try{
+      const data = JSON.parse(reader.result);
+      loadData(data);
+    }catch(err){
+      alert('Could not read that file — is it a character .json saved from this tool?');
+    }
+  };
+  reader.readAsText(file);
+  e.target.value='';
+};
+
+document.getElementById('btnNew').onclick = ()=>{
+  if(confirm('Clear the sheet and start a new character? Unsaved changes will be lost.')){
+    document.querySelectorAll('#sheet input[type=text], #sheet input:not([type]), #sheet input[name^="score_"]').forEach(el=>{
+      if(el.name && el.name.startsWith('score_')) el.value='10'; else el.value='';
+    });
+    document.querySelectorAll('#sheet input[type=checkbox]').forEach(el=>el.checked=false);
+    document.querySelectorAll('#sheet textarea').forEach(el=>el.value='');
+    document.querySelectorAll('#sheet select').forEach(el=>el.selectedIndex=0);
+    attacksBody.innerHTML=''; for(let i=0;i<3;i++) attacksBody.appendChild(makeAttackRow());
+    spellsBody.innerHTML='';
+    recalc();
+  }
+};
+
+// ---------- print / PDF ----------
+function prepareForPrint(){
+  document.body.classList.add('printing');
+  document.querySelectorAll('#sheet textarea').forEach(ta=>{
+    const div = document.createElement('div');
+    div.className='print-textarea';
+    div.textContent = ta.value;
+    ta.insertAdjacentElement('afterend', div);
+  });
+}
+function cleanupAfterPrint(){
+  document.body.classList.remove('printing');
+  document.querySelectorAll('.print-textarea').forEach(d=>d.remove());
+}
+document.getElementById('btnPdf').onclick = ()=>{
+  prepareForPrint();
+  window.print();
+};
+window.addEventListener('afterprint', cleanupAfterPrint);
+
+recalc();
+</script>
+</body>
+</html>
