@@ -184,6 +184,65 @@
     margin-left:5px;
   }
 
+  #choicesCard{border-color:var(--gold);}
+  #choicesCard h2{background:var(--forest);}
+  .choice-group{
+    margin-bottom:14px;
+    padding-bottom:12px;
+    border-bottom:1px dashed var(--line);
+  }
+  .choice-group:last-child{border-bottom:none; margin-bottom:0; padding-bottom:0;}
+  .choice-group-title{
+    font-family:'Cinzel',serif;
+    font-size:11.5px;
+    text-transform:uppercase;
+    letter-spacing:0.05em;
+    color:var(--ink-soft);
+    margin-bottom:6px;
+  }
+  .choice-row{
+    display:flex;
+    flex-wrap:wrap;
+    align-items:center;
+    gap:8px;
+    margin-bottom:6px;
+  }
+  .choice-row label.inline{
+    font-size:13px;
+    color:var(--ink-soft);
+    min-width:130px;
+    flex-shrink:0;
+  }
+  .choice-row select, .choice-row input[type=text]{
+    flex:1 1 160px;
+    min-width:140px;
+    border:1px solid var(--line);
+    background:var(--parchment);
+    border-radius:4px;
+    padding:6px 8px;
+    font-family:'EB Garamond',serif;
+    font-size:14px;
+  }
+  .choice-row select.unfilled{
+    border-color:var(--burgundy);
+    background:#fbeceb;
+  }
+  .choice-row .radio-opt{
+    display:flex; align-items:center; gap:4px;
+    font-size:13px;
+    margin-right:10px;
+  }
+  .choice-static{font-size:13px; color:var(--ink-soft);}
+  .choice-badge{
+    display:inline-block;
+    background:var(--parchment);
+    border:1px solid var(--line);
+    border-radius:3px;
+    padding:2px 7px;
+    margin:0 4px 4px 0;
+    font-size:12.5px;
+  }
+
   /* layout grid */
   .grid{
     display:grid;
@@ -501,6 +560,11 @@
       defaults are marked below so you know what to double check.</p>
   </div>
 
+  <div class="card" id="choicesCard" style="display:none;">
+    <h2>Choices to Make <span class="sub" id="choicesSub"></span></h2>
+    <div id="choicesItems"></div>
+  </div>
+
   <div class="grid">
 
     <!-- LEFT COLUMN: abilities -->
@@ -595,7 +659,7 @@
       </div>
 
       <div class="card">
-        <h2>Spellcasting</h2>
+        <h2>Spellcasting <span class="sub" style="font-weight:400; font-size:10px;">hover a spell name for a quick description</span></h2>
         <div class="spell-meta">
           <div class="field"><label>Class</label><input class="plain-input" name="spellClass"></div>
           <div class="field">
@@ -693,6 +757,7 @@ ABILITIES.forEach(a=>{
     <div class="info">
       <label>${a.name}<span class="racial-tag" data-racialtag="${a.key}"></span></label>
       <input type="hidden" name="racialBonus_${a.key}" value="0">
+      <input type="hidden" name="classBonus_${a.key}" value="0">
       <div class="save-line">
         <input type="checkbox" name="save_prof_${a.key}">
         <span>Save</span>
@@ -715,7 +780,135 @@ SKILLS.forEach(s=>{
   skillsWrap.appendChild(row);
 });
 
-// ---------- dynamic tables ----------
+const SPELL_LISTS = {
+  artificer: {
+    0: ['Acid Splash','Dancing Lights','Fire Bolt','Guidance','Light','Mage Hand','Mending','Message','Poison Spray','Prestidigitation','Ray of Frost','Resistance','Shocking Grasp','Spare the Dying','Thorn Whip'],
+    1: ['Alarm','Arcane Weapon','Cure Wounds','Detect Magic','Disguise Self','Expeditious Retreat','False Life','Grease','Identify','Jump','Longstrider','Sanctuary','Shield of Faith'],
+    2: ['Aid','Alter Self','Arcane Lock','Blur','Continual Flame','Darkvision','Enhance Ability','Enlarge/Reduce','Heat Metal','Invisibility','Lesser Restoration','Levitate','Magic Mouth','Magic Weapon','Protection from Poison','Rope Trick','See Invisibility','Spider Climb'],
+    3: ['Blink','Dispel Magic','Elemental Weapon','Fly','Gaseous Form','Glyph of Warding','Haste','Protection from Energy','Revivify','Water Breathing','Water Walk'],
+    4: ['Arcane Eye','Fabricate','Freedom of Movement',"Leomund's Secret Chest","Mordenkainen's Faithful Hound","Mordenkainen's Private Sanctum","Otiluke's Resilient Sphere",'Stone Shape','Stoneskin'],
+    5: ["Animate Objects","Bigby's Hand",'Creation','Greater Restoration','Wall of Stone']
+  }
+};
+const CUSTOM_SPELL = '__custom__';
+
+const SPELL_DESCRIPTIONS = {
+  'Acid Splash': "Ranged acid spray; one or two creatures within 5 ft of each other take acid damage on a failed Dex save.",
+  'Dancing Lights': "Create up to four torch-sized lights (or one dim humanoid shape) that you move around within range.",
+  'Fire Bolt': "Ranged spell attack that deals fire damage; scales with an extra die at higher character levels.",
+  'Guidance': "Touch a willing creature; it adds 1d4 to one ability check of its choice before the spell ends.",
+  'Light': "Touch an object to make it shed bright light in a 20-ft radius for 1 hour.",
+  'Mage Hand': "Conjure a spectral hand that can manipulate, carry, or retrieve small objects at range.",
+  'Mending': "Repair a single break or tear in an object with a touch, no trace of the mend remaining.",
+  'Message': "Whisper a message only one chosen creature within range can hear, with a short private reply.",
+  'Poison Spray': "Project poison at a creature within 10 ft; poison damage on a failed Con save.",
+  'Prestidigitation': "Minor magical trick: small sensory effects, cleaning/soiling, minor flavors, tiny objects, etc.",
+  'Ray of Frost': "Ranged spell attack dealing cold damage and reducing the target's speed by 10 ft until your next turn.",
+  'Resistance': "Touch a willing creature to grant advantage on its next save against one chosen damage type.",
+  'Shocking Grasp': "Melee spell attack dealing lightning damage; the target can't take reactions until its next turn.",
+  'Spare the Dying': "Touch a creature at 0 HP to stabilize it without needing a death save.",
+  'Thorn Whip': "Melee spell attack that deals piercing damage and pulls the target up to 10 ft closer to you.",
+
+  'Alarm': "Ward an area; you're alerted (mentally or audibly) if a creature enters it uninvited within 8 hours.",
+  'Arcane Weapon': "Turn a weapon you're holding into a magic weapon that deals extra force damage for the duration.",
+  'Cure Wounds': "Touch a creature to restore hit points; scales with a higher-level slot.",
+  'Detect Magic': "Sense the presence of magic within 30 ft and see faint auras around magical things.",
+  'Disguise Self': "Change your appearance (height, features, clothing) until the spell ends or you dismiss it.",
+  'Expeditious Retreat': "Bonus action Dash on your turns for the duration; great for repositioning.",
+  'False Life': "Gain temporary hit points for the duration.",
+  'Grease': "Cover a 10-ft square in slick grease; creatures there must save or fall prone.",
+  'Identify': "Learn the properties of a magic item, or the spells affecting a creature/object, over 1 minute.",
+  'Jump': "Touch a creature to triple its jump distance for the duration.",
+  'Longstrider': "Touch a creature to increase its speed by 10 ft for the duration.",
+  'Sanctuary': "Ward a creature so attackers must make a Wisdom save or redirect their attack elsewhere.",
+  'Shield of Faith': "A shimmering field grants a targeted creature +2 AC for the duration.",
+
+  'Aid': "Bolster up to three allies, increasing their max and current HP for the duration.",
+  'Alter Self': "Change your own form: aquatic adaptation, a natural weapon, or a disguised appearance.",
+  'Arcane Lock': "Magically lock a door, chest, or portal so only you or those you designate can open it.",
+  'Blur': "Your form flickers, giving attackers disadvantage on attack rolls against you.",
+  'Continual Flame': "Create a flameless, heatless magical flame that burns indefinitely on an object.",
+  'Darkvision': "Touch a creature to grant it darkvision out to 60 ft for the duration.",
+  'Enhance Ability': "Grant a creature advantage on checks of one chosen ability, plus a minor extra benefit.",
+  'Enlarge/Reduce': "Cause a creature or object to grow larger (bigger, stronger) or shrink (smaller, weaker).",
+  'Heat Metal': "Make a metal object glow hot, damaging whoever's holding/wearing it; repeatable each turn.",
+  'Invisibility': "Make a willing creature invisible until the spell ends, attacking, or casting a spell.",
+  'Lesser Restoration': "Touch a creature to end one disease or condition (blinded, paralyzed, poisoned, etc.).",
+  'Levitate': "Make a creature or object float up/down and move vertically for the duration.",
+  'Magic Mouth': "Implant a message that an object or creature speaks when a trigger condition you set occurs.",
+  'Magic Weapon': "Touch a nonmagical weapon to make it magical, granting a +1 bonus to attack and damage rolls.",
+  'Protection from Poison': "Touch a creature to neutralize one poison, cure poisoned condition, and grant resistance.",
+  'Rope Trick': "An invisible extradimensional space opens at the top of a rope, hiding up to 8 creatures.",
+  'See Invisibility': "See invisible creatures/objects and see into the Ethereal Plane for the duration.",
+  'Spider Climb': "Touch a creature to let it move on walls/ceilings and gain a climbing speed.",
+
+  'Blink': "Roll each turn a chance to slip briefly to the Ethereal Plane, becoming hard to hit or reach.",
+  'Dispel Magic': "End one spell affecting a creature, object, or effect within range.",
+  'Elemental Weapon': "Imbue a weapon with elemental energy, adding bonus damage of a chosen type.",
+  'Fly': "Touch a creature to grant it a flying speed of 60 ft for the duration.",
+  'Gaseous Form': "Turn a willing creature into a misty cloud, immune to most damage and able to squeeze through gaps.",
+  'Glyph of Warding': "Inscribe a glyph that triggers a spell or explosion when its trigger condition is met.",
+  'Haste': "Double a creature's speed, +2 AC, advantage on Dex saves, and an extra action (minus a second attack) — but it's slowed when the spell ends.",
+  'Protection from Energy': "Touch a creature to grant resistance to one damage type (acid, cold, fire, lightning, thunder).",
+  'Revivify': "Touch a creature dead for no more than a minute to return it to life with 1 HP.",
+  'Water Breathing': "Grant up to 10 creatures the ability to breathe underwater for 24 hours.",
+  'Water Walk': "Grant up to 10 creatures the ability to move across any liquid surface as if it were solid ground.",
+
+  'Arcane Eye': "Create an invisible, magical eye that flies around and lets you see through it remotely.",
+  'Fabricate': "Convert raw materials into a finished product of the same material, instantly.",
+  'Freedom of Movement': "Touch a creature so its movement is unaffected by difficult terrain, restraint, or paralysis effects.",
+  "Leomund's Secret Chest": "Hide an ornate chest on the Ethereal Plane, recallable at will; the linked replica lets you access it.",
+  "Mordenkainen's Faithful Hound": "Conjure an invisible watchdog that barks at intruders and can bite an enemy each round.",
+  "Mordenkainen's Private Sanctum": "Ward an area against scrying, teleportation, and sound/light passing through its boundary.",
+  "Otiluke's Resilient Sphere": "Encase a creature or object in an impenetrable, movable magical sphere.",
+  'Stone Shape': "Reshape a section of stone into any form useful to you (a door, weapon, statue, etc.).",
+  'Stoneskin': "Touch a creature to grant resistance to nonmagical bludgeoning, piercing, and slashing damage.",
+
+  'Animate Objects': "Bring up to ten small (or fewer, larger) nonmagical objects to life to fight for you.",
+  "Bigby's Hand": "Create a spectral hand that can push, grapple, block, or strike as you direct it each turn.",
+  'Creation': "Fabricate an object of nonliving matter from raw materials shaped by light and shadow.",
+  'Greater Restoration': "Touch a creature to remove exhaustion, restore a reduced ability score, or end curses/petrification.",
+  'Wall of Stone': "Create a nonmagical wall of solid stone in a shape of your choosing."
+};
+
+
+function activeSpellListKey(){
+  const classKey = document.getElementById('buildClass') ? document.getElementById('buildClass').value : '';
+  return SPELL_LISTS[classKey] ? classKey : null;
+}
+
+function populateSpellNameSelect(selectEl, level, preferredName){
+  const listKey = activeSpellListKey();
+  const options = (listKey && SPELL_LISTS[listKey][level]) ? SPELL_LISTS[listKey][level] : [];
+  selectEl.innerHTML = '';
+  if(options.length === 0){
+    const o = document.createElement('option');
+    o.value=''; o.textContent = listKey ? '— no spells at this level —' : '— choose a class above for a spell list —';
+    selectEl.appendChild(o);
+  } else {
+    const blank = document.createElement('option');
+    blank.value=''; blank.textContent='— choose a spell —';
+    selectEl.appendChild(blank);
+    options.forEach(name=>{
+      const o = document.createElement('option');
+      o.value = name; o.textContent = name;
+      if(SPELL_DESCRIPTIONS[name]) o.title = SPELL_DESCRIPTIONS[name];
+      selectEl.appendChild(o);
+    });
+  }
+  const custom = document.createElement('option');
+  custom.value = CUSTOM_SPELL; custom.textContent = 'Other / custom…';
+  selectEl.appendChild(custom);
+
+  if(preferredName && options.includes(preferredName)){
+    selectEl.value = preferredName;
+  } else if(preferredName){
+    selectEl.value = CUSTOM_SPELL;
+  } else {
+    selectEl.value = '';
+  }
+}
+
 function makeAttackRow(vals={}){
   const tr = document.createElement('tr');
   tr.innerHTML = `
@@ -727,19 +920,55 @@ function makeAttackRow(vals={}){
 }
 function makeSpellRow(vals={}){
   const tr = document.createElement('tr');
-  const lvl = vals.level||'0';
+  const lvl = vals.level!==undefined ? String(vals.level) : '0';
   let opts = '';
   ['C','1','2','3','4','5','6','7','8','9'].forEach(l=>{
     const v = l==='C' ? '0' : l;
     opts += `<option value="${v}" ${v===lvl?'selected':''}>${l}</option>`;
   });
+  const customVisible = vals.name && !(SPELL_LISTS[activeSpellListKey()] && (SPELL_LISTS[activeSpellListKey()][lvl]||[]).includes(vals.name));
   tr.innerHTML = `
     <td><select class="spell-level">${opts}</select></td>
-    <td><input type="text" class="spell-name" value="${vals.name||''}"></td>
+    <td>
+      <select class="spell-name-select"></select>
+      <input type="text" class="spell-name-custom" placeholder="Custom spell name" value="${vals.name||''}" style="${customVisible?'':'display:none'}; margin-top:3px;">
+    </td>
     <td style="text-align:center"><input type="checkbox" class="spell-prep" ${vals.prep?'checked':''}></td>
     <td><input type="text" class="spell-notes" value="${vals.notes||''}"></td>
     <td><button class="btn small danger" type="button" onclick="this.closest('tr').remove()">✕</button></td>`;
+
+  const levelSel = tr.querySelector('.spell-level');
+  const nameSel = tr.querySelector('.spell-name-select');
+  const customInput = tr.querySelector('.spell-name-custom');
+
+  populateSpellNameSelect(nameSel, parseInt(lvl,10), vals.name);
+
+  nameSel.addEventListener('change', ()=>{
+    if(nameSel.value === CUSTOM_SPELL){
+      customInput.style.display='';
+      customInput.focus();
+    } else {
+      customInput.style.display='none';
+      customInput.value='';
+    }
+  });
+  levelSel.addEventListener('change', ()=>{
+    populateSpellNameSelect(nameSel, parseInt(levelSel.value,10), null);
+    customInput.style.display='none';
+    customInput.value='';
+  });
+
   return tr;
+}
+function refreshAllSpellNameOptions(){
+  spellsBody.querySelectorAll('tr').forEach(tr=>{
+    const nameSel = tr.querySelector('.spell-name-select');
+    const levelSel = tr.querySelector('.spell-level');
+    const customInput = tr.querySelector('.spell-name-custom');
+    const current = (nameSel.value===CUSTOM_SPELL) ? customInput.value : nameSel.value;
+    populateSpellNameSelect(nameSel, parseInt(levelSel.value,10), current);
+    customInput.style.display = (nameSel.value===CUSTOM_SPELL) ? '' : 'none';
+  });
 }
 
 const attacksBody = document.querySelector('#attacksTable tbody');
@@ -765,12 +994,19 @@ function recalc(){
   ABILITIES.forEach(a=>{
     const el = document.querySelector(`[name="score_${a.key}"]`);
     const bonusEl = document.querySelector(`[name="racialBonus_${a.key}"]`);
+    const classBonusEl = document.querySelector(`[name="classBonus_${a.key}"]`);
     const bonus = bonusEl ? (parseInt(bonusEl.value,10)||0) : 0;
+    const classBonus = classBonusEl ? (parseInt(classBonusEl.value,10)||0) : 0;
     const base = parseInt(el.value,10);
-    scores[a.key] = mod((isNaN(base)?10:base) + bonus);
+    scores[a.key] = mod((isNaN(base)?10:base) + bonus + classBonus);
     document.querySelector(`[data-mod="${a.key}"]`).textContent = fmt(scores[a.key]);
     const tag = document.querySelector(`[data-racialtag="${a.key}"]`);
-    if(tag) tag.textContent = bonus ? `(${fmt(bonus)} racial)` : '';
+    if(tag){
+      const parts = [];
+      if(bonus) parts.push(`${fmt(bonus)} racial`);
+      if(classBonus) parts.push(`${fmt(classBonus)} ASI`);
+      tag.textContent = parts.length ? `(${parts.join(', ')})` : '';
+    }
   });
 
   const classLevel = document.querySelector('[name="classLevel"]').value;
@@ -802,7 +1038,10 @@ function recalc(){
   if(spellAbility && scores[spellAbility]!==undefined){
     const dc = 8 + pb + scores[spellAbility];
     const atk = pb + scores[spellAbility];
-    dcEl.textContent = `DC ${dc} / ${fmt(atk)}`;
+    const lvlMatch = (classLevel||'').match(/(\d+)/);
+    const lvlNum = lvlMatch ? parseInt(lvlMatch[1],10) : 1;
+    const prepared = Math.max(1, scores[spellAbility] + Math.floor(lvlNum/2));
+    dcEl.textContent = `DC ${dc} / ${fmt(atk)} · prepare ${prepared}`;
   } else {
     dcEl.textContent = '— / —';
   }
@@ -829,14 +1068,16 @@ function setAutoBlock(textareaEl, content){
   }
 }
 
+const STANDARD_LANGUAGES = ['Dwarvish','Elvish','Giant','Gnomish','Goblin','Halfling','Orc','Abyssal','Celestial','Draconic','Deep Speech','Infernal','Primordial','Sylvan','Undercommon'];
+const STANDARD_TOOLS = ["Alchemist's Supplies","Brewer's Supplies","Calligrapher's Supplies","Carpenter's Tools","Cartographer's Tools","Cobbler's Tools","Cook's Utensils","Glassblower's Tools","Jeweler's Tools","Leatherworker's Tools","Mason's Tools","Painter's Supplies","Potter's Tools","Smith's Tools","Tinker's Tools","Weaver's Tools","Woodcarver's Tools","Thieves' Tools","Herbalism Kit"];
+
 const RACES = {
   vedalken: {
     name: 'Vedalken',
     speed: '30 ft',
     asi: {int:2, wis:1},
-    languages: 'Common, Vedalken, +1 language of your choice',
-    skillChoice: {options:['Arcana','History','Investigation','Medicine','Performance','Sleight of Hand'], defaultPick:'history', label:'Tireless Precision skill'},
-    tool: "Alchemist's Supplies (or another tool of your choice)",
+    numRacialLanguages: 1,
+    skillChoice: {options:['Arcana','History','Investigation','Medicine','Performance','Sleight of Hand'], label:'Tireless Precision skill'},
     features: [
       "Vedalken Dispassion: Advantage on Intelligence, Wisdom, and Charisma saving throws.",
       "Tireless Precision: Proficient in {SKILL} and {TOOL}. When you make an ability check with either, roll a d4 and add it to the total (a rolled bonus — apply it yourself at the table).",
@@ -854,28 +1095,30 @@ const CLASSES = {
     armor: 'Light armor, medium armor, shields',
     weapons: 'Simple weapons',
     tools: "Thieves' tools, tinker's tools, one artisan's tool of your choice",
-    skillChoice: {options:['Arcana','History','Investigation','Medicine','Nature','Perception','Sleight of Hand'], count:2, defaultPicks:['investigation','perception'], label:'Artificer skill choices'},
+    skillChoice: {options:['Arcana','History','Investigation','Medicine','Nature','Perception','Sleight of Hand'], count:2, label:'Artificer skill choices'},
     spellAbility: 'int',
+    subclassLevel: 3,
+    subclassOptions: ['Alchemist','Armorer','Artillerist','Battle Smith'],
     features: [
       {lvl:1, text:"Magical Tinkering: As an action, touch a Tiny nonmagical object and give it a minor magical property (light, sound, sensor message, or the appearance of a mystical mark)."},
       {lvl:1, text:"Spellcasting: Intelligence-based, prepared caster. Requires thieves'/artisan's tools in hand to cast."},
       {lvl:2, text:"Infuse Item: Learn artificer infusions; imbue up to your limit of mundane items with magic after a long rest."},
-      {lvl:3, text:"Artificer Specialist: Choose a subclass (Alchemist, Armorer, Artillerist, or Battle Smith)."},
+      {lvl:3, text:"Artificer Specialist: Choose a subclass."},
       {lvl:3, text:"The Right Tool for the Job: Spend 1 hour to magically create one set of artisan's tools in a nearby unoccupied space."},
-      {lvl:4, text:"Ability Score Improvement."},
+      {lvl:4, text:"Ability Score Improvement.", asi:true},
       {lvl:6, text:"Tool Expertise: Double your proficiency bonus for ability checks with tools you're proficient in."},
-      {lvl:6, text:"Artificer Specialist feature."},
+      {lvl:6, text:"Artificer Specialist feature (check your subclass)."},
       {lvl:7, text:"Flash of Genius: Reaction to add your Intelligence modifier to an ability check or saving throw made by you or a creature within 30 ft."},
-      {lvl:8, text:"Ability Score Improvement."},
-      {lvl:8, text:"Artificer Specialist feature."},
+      {lvl:8, text:"Ability Score Improvement.", asi:true},
+      {lvl:8, text:"Artificer Specialist feature (check your subclass)."},
       {lvl:10, text:"Magic Item Adept: Craft uncommon magic items twice as fast, and attune to up to 4 magic items."},
       {lvl:11, text:"Spell-Storing Item: Store a 1st- or 2nd-level spell in an object after a long rest for allies to use."},
-      {lvl:12, text:"Ability Score Improvement."},
+      {lvl:12, text:"Ability Score Improvement.", asi:true},
       {lvl:14, text:"Magic Item Savant: Ignore class/race/level requirements for attuning magic items; attune to up to 5."},
-      {lvl:15, text:"Artificer Specialist feature."},
-      {lvl:16, text:"Ability Score Improvement."},
+      {lvl:15, text:"Artificer Specialist feature (check your subclass)."},
+      {lvl:16, text:"Ability Score Improvement.", asi:true},
       {lvl:18, text:"Magic Item Master: Attune to up to 6 magic items."},
-      {lvl:19, text:"Ability Score Improvement (or a feat)."},
+      {lvl:19, text:"Ability Score Improvement (or a feat).", asi:true},
       {lvl:20, text:"Soul of Artifice: +1 to all saving throws per attuned magic item; end an infusion to drop to 1 HP instead of 0."}
     ],
     // [cantrips, {slotLevel: count}]
@@ -908,7 +1151,7 @@ const BACKGROUNDS = {
   simicScientist: {
     name: 'Simic Scientist',
     skills: ['arcana','medicine'],
-    languages: '2 languages of your choice',
+    numLanguages: 2,
     equipment: "A Simic insignia, commoner's clothes, a book of research notes, an ink pen, a bottle of squid ink, a flask of oil, a vial of acid, a vial of fish scales, a vial of seaweed, a vial of jellyfish stingers, a glass bottle of unidentified slime, and a belt pouch containing 10 gp.",
     startingGp: 10,
     features: [
@@ -931,69 +1174,339 @@ function setFieldIfNamed(name, val){
   if(el) el.value = val;
 }
 
+function currentAbilityMod(key){
+  const scoreEl = document.querySelector(`[name="score_${key}"]`);
+  const bonusEl = document.querySelector(`[name="racialBonus_${key}"]`);
+  const classBonusEl = document.querySelector(`[name="classBonus_${key}"]`);
+  const base = parseInt(scoreEl && scoreEl.value, 10);
+  const bonus = bonusEl ? (parseInt(bonusEl.value,10)||0) : 0;
+  const classBonus = classBonusEl ? (parseInt(classBonusEl.value,10)||0) : 0;
+  return mod((isNaN(base)?10:base) + bonus + classBonus);
+}
+
+function skillKeyByName(name){
+  const s = SKILLS.find(s=>s.name===name);
+  return s ? s.key : '';
+}
+
+function buildSelect(name, options, placeholder, titleFn){
+  let html = `<select name="${name}">`;
+  html += `<option value="">${placeholder||'— choose —'}</option>`;
+  options.forEach(o=>{
+    const value = (typeof o==='string') ? o : o.value;
+    const label = (typeof o==='string') ? o : o.label;
+    const t = titleFn ? (titleFn(value)||'') : '';
+    html += `<option value="${String(value).replace(/"/g,'&quot;')}"${t?` title="${t.replace(/"/g,'&quot;')}"`:''}>${label}</option>`;
+  });
+  html += `</select>`;
+  return html;
+}
+
+const ACTIVE = {race:null, cls:null, bg:null, level:1, asiLevels:[]};
+let managedSkillKeys = new Set();
+
+function syncManagedSkills(){
+  const newSet = new Set();
+  if(ACTIVE.bg) ACTIVE.bg.skills.forEach(k=>newSet.add(k));
+  if(ACTIVE.cls){
+    for(let i=0;i<ACTIVE.cls.skillChoice.count;i++){
+      const el = document.querySelector(`[name="choice_classSkill_${i}"]`);
+      if(el && el.value) newSet.add(el.value);
+    }
+  }
+  if(ACTIVE.race){
+    const el = document.querySelector('[name="choice_racialSkill"]');
+    if(el && el.value) newSet.add(el.value);
+  }
+  managedSkillKeys.forEach(k=>{ if(!newSet.has(k)) checkSkill(k, false); });
+  newSet.forEach(k=>checkSkill(k, true));
+  managedSkillKeys = newSet;
+}
+
+function recomputeClassBonuses(){
+  const totals = {};
+  ABILITIES.forEach(a=>totals[a.key]=0);
+  (ACTIVE.asiLevels||[]).forEach(lvl=>{
+    if(lvl > ACTIVE.level) return;
+    const modeEl = document.querySelector(`[name="choice_asi${lvl}_mode"]:checked`);
+    const mode = modeEl ? modeEl.value : '';
+    if(mode==='two'){
+      const a0 = document.querySelector(`[name="choice_asi${lvl}_twoA0"]`).value;
+      const a1 = document.querySelector(`[name="choice_asi${lvl}_twoA1"]`).value;
+      if(a0) totals[a0] = (totals[a0]||0) + 1;
+      if(a1) totals[a1] = (totals[a1]||0) + 1;
+    } else if(mode==='one'){
+      const a0 = document.querySelector(`[name="choice_asi${lvl}_oneA0"]`).value;
+      if(a0) totals[a0] = (totals[a0]||0) + 2;
+    }
+  });
+  ABILITIES.forEach(a=>{
+    const el = document.querySelector(`[name="classBonus_${a.key}"]`);
+    if(el) el.value = totals[a.key] || 0;
+  });
+}
+
+function asiSummary(lvl){
+  const modeEl = document.querySelector(`[name="choice_asi${lvl}_mode"]:checked`);
+  const mode = modeEl ? modeEl.value : '';
+  if(mode==='two'){
+    const a0 = document.querySelector(`[name="choice_asi${lvl}_twoA0"]`).value;
+    const a1 = document.querySelector(`[name="choice_asi${lvl}_twoA1"]`).value;
+    if(a0 && a1) return `Ability Score Improvement: +1 ${a0.toUpperCase()}, +1 ${a1.toUpperCase()}.`;
+    return 'Ability Score Improvement — not yet chosen.';
+  }
+  if(mode==='one'){
+    const a0 = document.querySelector(`[name="choice_asi${lvl}_oneA0"]`).value;
+    if(a0) return `Ability Score Improvement: +2 ${a0.toUpperCase()}.`;
+    return 'Ability Score Improvement — not yet chosen.';
+  }
+  if(mode==='feat'){
+    const feat = document.querySelector(`[name="choice_asi${lvl}_feat"]`).value;
+    return feat ? `Feat chosen instead of ASI: ${feat}.` : 'Feat instead of ASI — not yet named.';
+  }
+  return 'Ability Score Improvement — not yet chosen.';
+}
+
+function updateAsiVisibility(){
+  (ACTIVE.asiLevels||[]).forEach(lvl=>{
+    const modeEl = document.querySelector(`[name="choice_asi${lvl}_mode"]:checked`);
+    const mode = modeEl ? modeEl.value : '';
+    const two = document.getElementById(`asiTwoRow${lvl}`);
+    const one = document.getElementById(`asiOneRow${lvl}`);
+    const feat = document.getElementById(`asiFeatRow${lvl}`);
+    if(two) two.style.display = mode==='two' ? '' : 'none';
+    if(one) one.style.display = mode==='one' ? '' : 'none';
+    if(feat) feat.style.display = mode==='feat' ? '' : 'none';
+  });
+}
+
+function markRequiredFields(){
+  document.querySelectorAll('#choicesItems select').forEach(sel=>{
+    const row = sel.closest('.choice-row');
+    if(row && row.style.display==='none') return;
+    sel.classList.toggle('unfilled', !sel.value);
+  });
+}
+
+function regenerateAutoText(){
+  const race = ACTIVE.race, cls = ACTIVE.cls, bg = ACTIVE.bg, level = ACTIVE.level;
+  const val = (name)=>{ const el = document.querySelector(`[name="${name}"]`); return el ? el.value : ''; };
+  const featureLines = [];
+
+  if(race){
+    featureLines.push(`RACE — ${race.name}`);
+    const racialSkillKey = val('choice_racialSkill');
+    const racialSkillName = racialSkillKey ? SKILLS.find(s=>s.key===racialSkillKey).name : '(not yet chosen)';
+    const racialTool = val('choice_racialTool') || '(not yet chosen)';
+    race.features.forEach(f=>{
+      featureLines.push('• ' + f.replace('{SKILL}', racialSkillName).replace('{TOOL}', racialTool));
+    });
+    const racialLangs = [];
+    for(let i=0;i<race.numRacialLanguages;i++) racialLangs.push(val(`choice_lang_racial_${i}`) || '(not yet chosen)');
+    featureLines.push(`Languages: Common, ${race.name}, ${racialLangs.join(', ')}`);
+    featureLines.push('');
+  }
+
+  if(cls){
+    featureLines.push(`CLASS — ${cls.name} (Level ${level})`);
+    cls.features.filter(f=>f.lvl<=level).forEach(f=>{
+      featureLines.push(`• (Lvl ${f.lvl}) ${f.asi ? asiSummary(f.lvl) : f.text}`);
+    });
+    const classSkillNames = [];
+    for(let i=0;i<cls.skillChoice.count;i++){
+      const k = val(`choice_classSkill_${i}`);
+      classSkillNames.push(k ? SKILLS.find(s=>s.key===k).name : '(not yet chosen)');
+    }
+    featureLines.push(`Skill choices: ${classSkillNames.join(', ')}`);
+    if(cls.subclassLevel && level >= cls.subclassLevel){
+      featureLines.push(`Subclass: ${val('choice_subclass') || '(not yet chosen)'}`);
+    }
+    featureLines.push('');
+
+    const tbl = cls.slots[level];
+    const cantripNames = [];
+    for(let i=0;i<tbl.cantrips;i++) cantripNames.push(val(`choice_cantrip_${i}`) || '(not yet chosen)');
+    featureLines.push(`Cantrips known: ${cantripNames.join(', ')}`);
+    featureLines.push('');
+  }
+
+  if(bg){
+    featureLines.push(`BACKGROUND — ${bg.name}`);
+    bg.features.forEach(f=>featureLines.push('• ' + f));
+    const bgLangs = [];
+    for(let i=0;i<bg.numLanguages;i++) bgLangs.push(val(`choice_lang_bg_${i}`) || '(not yet chosen)');
+    featureLines.push(`Languages: ${bgLangs.join(', ')}`);
+  }
+
+  const featuresTa = document.querySelector('[name="features"]');
+  if(featuresTa) setAutoBlock(featuresTa, featureLines.join('\n'));
+
+  const profsTa = document.querySelector('[name="profsLanguages"]');
+  if(profsTa && cls && race){
+    const racialTool = val('choice_racialTool') || '(not yet chosen)';
+    const racialLangs = [];
+    for(let i=0;i<race.numRacialLanguages;i++) racialLangs.push(val(`choice_lang_racial_${i}`) || '(not yet chosen)');
+    const bgLangs = [];
+    if(bg) for(let i=0;i<bg.numLanguages;i++) bgLangs.push(val(`choice_lang_bg_${i}`) || '(not yet chosen)');
+    setAutoBlock(profsTa, [
+      `Armor: ${cls.armor}`,
+      `Weapons: ${cls.weapons}`,
+      `Tools: ${cls.tools}, ${racialTool} (racial)`,
+      `Saving Throws: ${cls.saves.map(k=>k.toUpperCase()).join(', ')}`,
+      `Languages: Common, ${race.name}, ${racialLangs.join(', ')}${bg ? '; '+bgLangs.join(', ')+' (background)' : ''}`
+    ].join('\n'));
+  }
+}
+
+function handleChoiceChange(){
+  if(!ACTIVE.cls && !ACTIVE.race && !ACTIVE.bg) return;
+  updateAsiVisibility();
+  markRequiredFields();
+  syncManagedSkills();
+  recomputeClassBonuses();
+  regenerateAutoText();
+  recalc();
+}
+
+function renderChoicesPanel(race, cls, bg, level){
+  const container = document.getElementById('choicesItems');
+  const card = document.getElementById('choicesCard');
+  const sub = document.getElementById('choicesSub');
+
+  const prev = {};
+  container.querySelectorAll('[name]').forEach(el=>{
+    if(el.type==='radio'){ if(el.checked) prev[el.name]=el.value; }
+    else prev[el.name] = el.value;
+  });
+
+  let html = '';
+
+  if(bg){
+    html += `<div class="choice-group"><div class="choice-group-title">Background Skills (fixed)</div>
+      <div>${bg.skills.map(k=>`<span class="choice-badge">${SKILLS.find(s=>s.key===k).name}</span>`).join('')}</div></div>`;
+  }
+
+  if(cls){
+    html += `<div class="choice-group"><div class="choice-group-title">${cls.name} Skill Proficiencies (choose ${cls.skillChoice.count})</div>`;
+    for(let i=0;i<cls.skillChoice.count;i++){
+      html += `<div class="choice-row"><label class="inline">Choice ${i+1}</label>${buildSelect(`choice_classSkill_${i}`, cls.skillChoice.options.map(name=>({value:skillKeyByName(name), label:name})))}</div>`;
+    }
+    html += `</div>`;
+  }
+
+  if(race){
+    html += `<div class="choice-group"><div class="choice-group-title">${race.name} — Tireless Precision</div>
+      <div class="choice-row"><label class="inline">Skill</label>${buildSelect('choice_racialSkill', race.skillChoice.options.map(name=>({value:skillKeyByName(name), label:name})))}</div>
+      <div class="choice-row"><label class="inline">Tool</label>${buildSelect('choice_racialTool', STANDARD_TOOLS)}</div>
+      </div>`;
+  }
+
+  if(race || bg){
+    html += `<div class="choice-group"><div class="choice-group-title">Languages</div>`;
+    if(race){
+      for(let i=0;i<race.numRacialLanguages;i++){
+        html += `<div class="choice-row"><label class="inline">Racial language ${i+1}</label>${buildSelect(`choice_lang_racial_${i}`, STANDARD_LANGUAGES)}</div>`;
+      }
+    }
+    if(bg){
+      for(let i=0;i<bg.numLanguages;i++){
+        html += `<div class="choice-row"><label class="inline">Background language ${i+1}</label>${buildSelect(`choice_lang_bg_${i}`, STANDARD_LANGUAGES)}</div>`;
+      }
+    }
+    html += `</div>`;
+  }
+
+  if(cls){
+    const tbl = cls.slots[level];
+    const classKey = document.getElementById('buildClass').value;
+    const cantripOpts = (SPELL_LISTS[classKey] && SPELL_LISTS[classKey][0]) || [];
+    html += `<div class="choice-group"><div class="choice-group-title">Cantrips Known (choose ${tbl.cantrips})</div>`;
+    for(let i=0;i<tbl.cantrips;i++){
+      html += `<div class="choice-row"><label class="inline">Cantrip ${i+1}</label>${buildSelect(`choice_cantrip_${i}`, cantripOpts, null, n=>SPELL_DESCRIPTIONS[n])}</div>`;
+    }
+    html += `</div>`;
+
+    if(cls.subclassLevel && level >= cls.subclassLevel){
+      html += `<div class="choice-group"><div class="choice-group-title">${cls.name} Specialist (Subclass)</div>
+        <div class="choice-row">${buildSelect('choice_subclass', cls.subclassOptions)}</div></div>`;
+    }
+  }
+
+  const asiLevels = cls ? cls.features.filter(f=>f.asi && f.lvl<=level).map(f=>f.lvl) : [];
+  asiLevels.forEach(lvl=>{
+    html += `<div class="choice-group"><div class="choice-group-title">Ability Score Improvement — Level ${lvl}</div>
+      <div class="choice-row">
+        <span class="radio-opt"><input type="radio" name="choice_asi${lvl}_mode" value="two" id="asi${lvl}_two"><label for="asi${lvl}_two">+1 to two scores</label></span>
+        <span class="radio-opt"><input type="radio" name="choice_asi${lvl}_mode" value="one" id="asi${lvl}_one"><label for="asi${lvl}_one">+2 to one score</label></span>
+        <span class="radio-opt"><input type="radio" name="choice_asi${lvl}_mode" value="feat" id="asi${lvl}_feat"><label for="asi${lvl}_feat">Take a feat instead</label></span>
+      </div>
+      <div class="choice-row" id="asiTwoRow${lvl}" style="display:none;">
+        <label class="inline">+1 to</label>${buildSelect(`choice_asi${lvl}_twoA0`, ABILITIES.map(a=>({value:a.key,label:a.name})))}
+        <label class="inline">+1 to</label>${buildSelect(`choice_asi${lvl}_twoA1`, ABILITIES.map(a=>({value:a.key,label:a.name})))}
+      </div>
+      <div class="choice-row" id="asiOneRow${lvl}" style="display:none;">
+        <label class="inline">+2 to</label>${buildSelect(`choice_asi${lvl}_oneA0`, ABILITIES.map(a=>({value:a.key,label:a.name})))}
+      </div>
+      <div class="choice-row" id="asiFeatRow${lvl}" style="display:none;">
+        <label class="inline">Feat name</label><input type="text" name="choice_asi${lvl}_feat" placeholder="e.g. Alert, Lucky, War Caster">
+      </div>
+    </div>`;
+  });
+
+  container.innerHTML = html;
+  ACTIVE.asiLevels = asiLevels;
+
+  container.querySelectorAll('[name]').forEach(el=>{
+    const p = prev[el.name];
+    if(p===undefined) return;
+    if(el.type==='radio'){ el.checked = (el.value===p); }
+    else el.value = p;
+  });
+
+  updateAsiVisibility();
+  markRequiredFields();
+
+  sub.textContent = `${cls?cls.name:''} — Level ${level}`;
+  card.style.display = (cls||race||bg) ? '' : 'none';
+}
+
 function applyBuild(){
   const raceKey = document.getElementById('buildRace').value;
   const classKey = document.getElementById('buildClass').value;
   const bgKey = document.getElementById('buildBackground').value;
   const level = Math.max(1, Math.min(20, parseInt(document.getElementById('buildLevel').value,10) || 1));
 
-  const race = RACES[raceKey];
-  const cls = CLASSES[classKey];
-  const bg = BACKGROUNDS[bgKey];
+  const race = RACES[raceKey] || null;
+  const cls = CLASSES[classKey] || null;
+  const bg = BACKGROUNDS[bgKey] || null;
 
-  const featureLines = [];
+  ACTIVE.race = race; ACTIVE.cls = cls; ACTIVE.bg = bg; ACTIVE.level = level;
 
-  // ---- Race ----
   ABILITIES.forEach(a=>{
     const bonusEl = document.querySelector(`[name="racialBonus_${a.key}"]`);
     if(bonusEl) bonusEl.value = (race && race.asi[a.key]) ? race.asi[a.key] : 0;
   });
+
   if(race){
     setFieldIfNamed('race', race.name);
     setFieldIfNamed('speed', race.speed);
-    checkSkill(race.skillChoice.defaultPick, true);
-    const skillLabel = SKILLS.find(s=>s.key===race.skillChoice.defaultPick).name;
-    featureLines.push(`RACE — ${race.name}`);
-    race.features.forEach(f=>{
-      featureLines.push('• ' + f.replace('{SKILL}', skillLabel).replace('{TOOL}', race.tool));
-    });
-    featureLines.push(`Languages: ${race.languages}`);
-    featureLines.push('');
   }
 
-  // ---- Class ----
   if(cls){
     setFieldIfNamed('classLevel', `${cls.name} ${level}`);
     setFieldIfNamed('hitDice', `${level}d${cls.hitDie}`);
     cls.saves.forEach(k=>checkSave(k,true));
-    (cls.skillChoice.defaultPicks||[]).forEach(k=>checkSkill(k,true));
     setFieldIfNamed('spellClass', cls.name);
     setFieldIfNamed('spellAbility', cls.spellAbility);
-
-    featureLines.push(`CLASS — ${cls.name} (Level ${level})`);
-    cls.features.filter(f=>f.lvl<=level).forEach(f=>featureLines.push(`• (Lvl ${f.lvl}) ${f.text}`));
-    const skillOptNames = cls.skillChoice.options.join(', ');
-    featureLines.push(`Skill choices (pick ${cls.skillChoice.count} from: ${skillOptNames}) — defaulted to ${cls.skillChoice.defaultPicks.map(k=>SKILLS.find(s=>s.key===k).name).join(' & ')}, change if you like.`);
-    featureLines.push('');
-
-    // spell slots
     const tbl = cls.slots[level];
     for(let l=1; l<=9; l++){
       const totalEl = document.querySelector(`[name="slotTotal_${l}"]`);
       if(totalEl) totalEl.value = (tbl.slots[l] || '');
     }
-    featureLines.push(`Cantrips known: ${tbl.cantrips} (choose from the Artificer spell list).`);
-    featureLines.push('');
   }
 
-  // ---- Background ----
   if(bg){
     setFieldIfNamed('background', bg.name);
-    bg.skills.forEach(k=>checkSkill(k,true));
-    featureLines.push(`BACKGROUND — ${bg.name}`);
-    bg.features.forEach(f=>featureLines.push('• ' + f));
-    featureLines.push(`Languages: ${bg.languages}`);
-
     const gpEl = document.querySelector('[name="gp"]');
     if(gpEl && !gpEl.value) gpEl.value = bg.startingGp;
     const equipTa = document.querySelector('[name="equipment"]');
@@ -1002,33 +1515,23 @@ function applyBuild(){
     }
   }
 
-  const featuresTa = document.querySelector('[name="features"]');
-  if(featuresTa) setAutoBlock(featuresTa, featureLines.join('\n'));
-
-  const profsTa = document.querySelector('[name="profsLanguages"]');
-  if(profsTa && cls && race){
-    setAutoBlock(profsTa, [
-      `Armor: ${cls.armor}`,
-      `Weapons: ${cls.weapons}`,
-      `Tools: ${cls.tools}, ${race.tool} (racial)`,
-      `Saving Throws: ${cls.saves.map(k=>k.toUpperCase()).join(', ')}`,
-      `Languages: ${race.languages}; ${bg?bg.languages+' (background)':''}`
-    ].join('\n'));
-  }
-
-  recalc();
+  renderChoicesPanel(race, cls, bg, level);
+  handleChoiceChange();
+  refreshAllSpellNameOptions();
 }
 
 document.getElementById('btnApplyBuild').onclick = applyBuild;
 ['buildRace','buildClass','buildBackground'].forEach(id=>{
   document.getElementById(id).addEventListener('change', applyBuild);
 });
+document.getElementById('choicesItems').addEventListener('change', handleChoiceChange);
 
 // ---------- save / load ----------
 function gatherData(){
   const fields = {};
   document.querySelectorAll('#sheet [name]').forEach(el=>{
     if(el.type==='checkbox') fields[el.name] = el.checked;
+    else if(el.type==='radio'){ if(el.checked) fields[el.name] = el.value; }
     else fields[el.name] = el.value;
   });
   const attacks = [...attacksBody.querySelectorAll('tr')].map(tr=>({
@@ -1036,12 +1539,17 @@ function gatherData(){
     bonus: tr.querySelector('.atk-bonus').value,
     dmg: tr.querySelector('.atk-dmg').value
   }));
-  const spells = [...spellsBody.querySelectorAll('tr')].map(tr=>({
-    level: tr.querySelector('.spell-level').value,
-    name: tr.querySelector('.spell-name').value,
-    prep: tr.querySelector('.spell-prep').checked,
-    notes: tr.querySelector('.spell-notes').value
-  }));
+  const spells = [...spellsBody.querySelectorAll('tr')].map(tr=>{
+    const nameSel = tr.querySelector('.spell-name-select');
+    const customInput = tr.querySelector('.spell-name-custom');
+    const name = (nameSel.value === CUSTOM_SPELL) ? customInput.value : nameSel.value;
+    return {
+      level: tr.querySelector('.spell-level').value,
+      name,
+      prep: tr.querySelector('.spell-prep').checked,
+      notes: tr.querySelector('.spell-notes').value
+    };
+  });
   return {fields, attacks, spells, _type:'dnd5e-character', _version:1};
 }
 
@@ -1051,16 +1559,47 @@ function escapeAttr(s){
 
 function loadData(data){
   if(!data || !data.fields) return;
+
+  // Rebuild the interactive choices panel first so choice_*/classBonus_* fields exist to receive values
+  const raceKey = data.fields.buildRace || '';
+  const classKey = data.fields.buildClass || '';
+  const bgKey = data.fields.buildBackground || '';
+  const level = Math.max(1, Math.min(20, parseInt(data.fields.buildLevel,10) || 1));
+  if(raceKey || classKey || bgKey){
+    const raceSel = document.getElementById('buildRace'); if(raceSel) raceSel.value = raceKey;
+    const classSel = document.getElementById('buildClass'); if(classSel) classSel.value = classKey;
+    const bgSel = document.getElementById('buildBackground'); if(bgSel) bgSel.value = bgKey;
+    const lvlInput = document.getElementById('buildLevel'); if(lvlInput) lvlInput.value = level;
+    ACTIVE.race = RACES[raceKey] || null;
+    ACTIVE.cls = CLASSES[classKey] || null;
+    ACTIVE.bg = BACKGROUNDS[bgKey] || null;
+    ACTIVE.level = level;
+    renderChoicesPanel(ACTIVE.race, ACTIVE.cls, ACTIVE.bg, level);
+  }
+
   Object.entries(data.fields).forEach(([name,val])=>{
-    const el = document.querySelector(`#sheet [name="${escapeAttr(name)}"]`);
-    if(!el) return;
-    if(el.type==='checkbox') el.checked = !!val;
-    else el.value = val;
+    const els = document.querySelectorAll(`#sheet [name="${escapeAttr(name)}"]`);
+    if(!els.length) return;
+    if(els[0].type==='radio'){
+      els.forEach(r=>{ r.checked = (r.value===val); });
+    } else if(els[0].type==='checkbox'){
+      els[0].checked = !!val;
+    } else {
+      els[0].value = val;
+    }
   });
   attacksBody.innerHTML='';
   (data.attacks && data.attacks.length ? data.attacks : [{},{},{}]).forEach(v=>attacksBody.appendChild(makeAttackRow(v)));
   spellsBody.innerHTML='';
   (data.spells||[]).forEach(v=>spellsBody.appendChild(makeSpellRow(v)));
+
+  if(ACTIVE.race || ACTIVE.cls || ACTIVE.bg){
+    managedSkillKeys = new Set();
+    updateAsiVisibility();
+    markRequiredFields();
+    syncManagedSkills();
+    recomputeClassBonuses();
+  }
   recalc();
 }
 
