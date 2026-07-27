@@ -242,6 +242,99 @@
     margin:0 4px 4px 0;
     font-size:12.5px;
   }
+  .confirm-row{
+    margin-top:14px;
+    padding-top:12px;
+    border-top:2px solid var(--gold);
+    display:flex;
+    align-items:center;
+    gap:12px;
+    flex-wrap:wrap;
+  }
+  .confirm-row .btn{background:var(--forest); font-size:13px; padding:10px 16px;}
+  .confirm-row .btn:hover{background:#2e3d31;}
+  .confirm-status{
+    font-size:12.5px;
+    color:var(--forest);
+    font-weight:600;
+    opacity:0;
+    transition:opacity 0.3s ease;
+  }
+  .confirm-status.show{opacity:1;}
+  .new-since-banner{
+    background:#fff7e6;
+    border:1px solid var(--gold);
+    border-radius:5px;
+    padding:8px 10px;
+    margin-bottom:14px;
+    font-size:13px;
+  }
+  .new-since-banner .choice-group-title{margin-bottom:4px;}
+
+  @keyframes attentionPulse{
+    0%, 100% { box-shadow: 0 0 0 0 rgba(169,120,47,0); }
+    50% { box-shadow: 0 0 0 6px rgba(169,120,47,0.45); }
+  }
+  .attention-pulse{ animation: attentionPulse 0.9s ease-in-out 3; border-color: var(--gold) !important; }
+
+  .prompt-banner{
+    background:#eef3ec;
+    border:1px solid var(--forest);
+    border-radius:5px;
+    padding:10px 12px;
+    margin-bottom:14px;
+    font-size:13px;
+  }
+  .prompt-banner .choice-group-title{color:var(--forest); margin-bottom:4px;}
+  .prompt-banner .btn{margin-top:8px;}
+
+  .spell-grant-item{
+    display:flex;
+    align-items:flex-start;
+    gap:8px;
+    padding:5px 2px;
+    font-size:13.5px;
+    border-bottom:1px dotted var(--line);
+  }
+  .spell-grant-item:last-child{border-bottom:none;}
+  .spell-grant-item input{margin-top:3px; accent-color:var(--forest); flex-shrink:0;}
+  .spell-grant-item .lvl-tag{
+    font-family:'JetBrains Mono',monospace;
+    font-size:10px;
+    color:var(--ink-soft);
+    background:var(--parchment);
+    border:1px solid var(--line);
+    border-radius:3px;
+    padding:1px 5px;
+    flex-shrink:0;
+  }
+
+  .prepared-counter-row{
+    display:flex;
+    align-items:center;
+    gap:10px;
+    margin-bottom:6px;
+    min-height:18px;
+  }
+  .prepared-counter{
+    font-family:'JetBrains Mono',monospace;
+    font-size:12px;
+    font-weight:700;
+    color:var(--forest);
+    background:var(--parchment);
+    border:1px solid var(--line);
+    border-radius:3px;
+    padding:2px 8px;
+  }
+  .prepared-counter.at-limit{color:var(--burgundy); border-color:var(--burgundy);}
+  .prepared-warning{
+    font-size:12px;
+    color:var(--burgundy);
+    font-weight:600;
+    opacity:0;
+    transition:opacity 0.25s ease;
+  }
+  .prepared-warning.show{opacity:1;}
 
   /* layout grid */
   .grid{
@@ -555,21 +648,29 @@
         <button class="btn small" id="btnApplyBuild" type="button">Apply / Level Up</button>
       </div>
     </div>
-    <p class="builder-hint">Fills in ability score bonuses, proficiencies, hit dice, speed, spell slots and features.
-      Ability score <em>rolls</em>, spell choices and skill choices from a list are left for you to decide — auto-picked
-      defaults are marked below so you know what to double check.</p>
+    <p class="builder-hint">Sets ability score bonuses, hit dice, speed and spell slots, and opens the Choices panel below.
+      Ability score <em>rolls</em> stay yours to enter — everything else is a real dropdown you pick, then confirm.</p>
+    <input type="hidden" name="lastConfirmedLevel" value="0">
+    <input type="hidden" name="lastBuildRace" value="">
+    <input type="hidden" name="lastBuildClass" value="">
+    <input type="hidden" name="lastBuildBackground" value="">
+    <input type="hidden" name="classGoldApplied" value="0">
   </div>
 
   <div class="card" id="choicesCard" style="display:none;">
     <h2>Choices to Make <span class="sub" id="choicesSub"></span></h2>
     <div id="choicesItems"></div>
+    <div class="confirm-row">
+      <button class="btn" id="btnConfirmChoices" type="button">✓ Confirm Choices &amp; Update Sheet</button>
+      <span class="confirm-status" id="confirmStatus"></span>
+    </div>
   </div>
 
   <div class="grid">
 
     <!-- LEFT COLUMN: abilities -->
     <div>
-      <div class="card">
+      <div class="card" id="abilityScoresCard">
         <h2>Ability Scores</h2>
         <div class="abilities" id="abilitiesWrap"></div>
       </div>
@@ -680,8 +781,12 @@
           <tbody></tbody>
         </table>
         <div class="row-actions" style="margin-bottom:10px;"></div>
+        <div class="prepared-counter-row">
+          <span id="preparedCounter" class="prepared-counter"></span>
+          <span id="preparedWarning" class="prepared-warning"></span>
+        </div>
         <table class="rows-table" id="spellsTable">
-          <thead><tr><th style="width:14%">Lvl</th><th style="width:38%">Spell</th><th style="width:16%">Prep?</th><th>Notes</th><th style="width:24px"></th></tr></thead>
+          <thead><tr><th style="width:10%">Lvl</th><th style="width:24%">Spell</th><th style="width:10%">Prep?</th><th style="width:32%">Effect / Damage</th><th>Notes</th><th style="width:24px"></th></tr></thead>
           <tbody></tbody>
         </table>
         <div class="row-actions"><button class="btn small secondary" id="addSpell">+ Add Spell</button></div>
@@ -868,9 +973,182 @@ const SPELL_DESCRIPTIONS = {
   "Bigby's Hand": "Create a spectral hand that can push, grapple, block, or strike as you direct it each turn.",
   'Creation': "Fabricate an object of nonliving matter from raw materials shaped by light and shadow.",
   'Greater Restoration': "Touch a creature to remove exhaustion, restore a reduced ability score, or end curses/petrification.",
-  'Wall of Stone': "Create a nonmagical wall of solid stone in a shape of your choosing."
+  'Wall of Stone': "Create a nonmagical wall of solid stone in a shape of your choosing.",
+
+  // --- Simic Guild Spells (background) ---
+  'Druidcraft': "A tiny bit of nature magic: predict weather, make a flower bloom, or create a small sensory effect.",
+  'Detect Poison and Disease': "Sense the presence and location of poison, poisonous creatures, and disease within 30 ft.",
+
+  // --- Subclass bonus spells (Alchemist / Armorer / Artillerist / Battle Smith) ---
+  'Healing Word': "Bonus-action ranged heal; restore hit points to a creature within 60 ft without touching it.",
+  'Ray of Sickness': "Ranged spell attack dealing poison damage; on a hit the target is also poisoned until your next turn.",
+  'Flaming Sphere': "Conjure a rolling 5-ft sphere of fire that burns nearby creatures and that you can move each turn.",
+  "Melf's Acid Arrow": "Ranged spell attack dealing acid damage now, with more acid damage at the end of the target's next turn.",
+  'Mass Healing Word': "Bonus-action heal up to six creatures within 60 ft at once.",
+  'Blight': "Necrotic energy withers a target (or a plant massively) for heavy damage on a failed Con save.",
+  'Death Ward': "Touch a creature so the first time it would drop to 0 HP, it instead drops to 1 HP.",
+  'Cloudkill': "A 20-ft sphere of poisonous fog that damages and can kill creatures caught inside each turn.",
+  'Raise Dead': "Return a dead creature to life (if willing) as long as its body is mostly intact and death wasn't too long ago.",
+  'Magic Missile': "Three automatically-hitting darts of force damage that you can split between targets.",
+  'Mirror Image': "Create three illusory duplicates of yourself that can be struck instead of you.",
+  'Hypnotic Pattern': "A dazzling area pattern that can leave several creatures charmed and incapacitated.",
+  'Lightning Bolt': "A 100-ft line of lightning damages everything caught along its length on a failed Dex save.",
+  'Passwall': "Create a temporary passage through a wall, floor, or ceiling of wood, plaster, or stone.",
+  'Shield': "Reaction spell granting +5 AC and immunity to magic missile until your next turn.",
+  'Thunderwave': "A wave of thunderous force pushes creatures back and damages them in front of you.",
+  'Scorching Ray': "Hurl three separate rays of fire, each a ranged spell attack dealing fire damage.",
+  'Shatter': "A loud ringing noise damages everything in a 10-ft sphere, extra harsh on inorganic material.",
+  'Fireball': "A classic: a 20-ft ball of fire deals heavy damage to everything caught in the area.",
+  'Wind Wall': "A wall of strong wind deflects small objects, arrows, and gas, and halves damage from ranged attacks.",
+  'Ice Storm': "Hail and ice pummel a 20-ft cylinder, dealing bludgeoning and cold damage to everyone inside.",
+  'Wall of Fire': "Create a wall of fire that damages anyone passing through or standing within 10 ft.",
+  'Cone of Cold': "A blast of frigid air in a 60-ft cone deals heavy cold damage to everything inside.",
+  'Heroism': "Touch a willing creature to grant it immunity to fear and temporary HP each turn for the duration.",
+  'Branding Smite': "Your next weapon hit deals extra radiant damage and makes the target visible/glowing.",
+  'Warding Bond': "Link yourself to another creature, sharing your defenses and resistances at a cost to your own HP.",
+  'Aura of Vitality': "Create a healing aura around yourself; spend actions each turn to heal allies who pass through it.",
+  'Conjure Barrage': "Hurl a barrage of weapons or ammunition in a 60-ft cone, damaging everyone caught inside.",
+  'Aura of Purity': "An aura that reduces poison/disease susceptibility and eases exhaustion, blinded, deafened, or paralyzed conditions for allies nearby.",
+  'Banishing Smite': "Your next weapon hit deals extra force damage and can banish the target to another plane briefly.",
+  'Mass Cure Wounds': "Heal a burst of up to six creatures in a 30-ft sphere at once.",
+  'Polymorph': "Transform a creature into a different beast form, changing its statistics until the spell ends."
 };
 
+const SPELL_LEVELS = {
+  'Healing Word':1,'Ray of Sickness':1,'Flaming Sphere':2,"Melf's Acid Arrow":2,'Mass Healing Word':3,
+  'Blight':4,'Death Ward':4,'Cloudkill':5,'Raise Dead':5,'Magic Missile':1,'Mirror Image':2,
+  'Hypnotic Pattern':3,'Lightning Bolt':3,'Fire Shield':4,'Greater Invisibility':4,'Passwall':5,'Wall of Force':5,
+  'Shield':1,'Thunderwave':1,'Scorching Ray':2,'Shatter':2,'Fireball':3,'Wind Wall':3,'Ice Storm':4,'Wall of Fire':4,
+  'Cone of Cold':5,'Heroism':1,'Branding Smite':2,'Warding Bond':2,'Aura of Vitality':3,'Conjure Barrage':3,
+  'Aura of Purity':4,'Banishing Smite':5,'Mass Cure Wounds':5,'Druidcraft':0,'Detect Poison and Disease':1,'Polymorph':4
+};
+
+function spellLevelOf(name){
+  if(SPELL_LEVELS[name]!==undefined) return SPELL_LEVELS[name];
+  for(const listKey in SPELL_LISTS){
+    const byLevel = SPELL_LISTS[listKey];
+    for(const lvl in byLevel){
+      if(byLevel[lvl].includes(name)) return parseInt(lvl,10);
+    }
+  }
+  return 0;
+}
+
+const WEAPONS = {
+  'Club': {dmg:'1d4', type:'bludgeoning'},
+  'Dagger': {dmg:'1d4', type:'piercing', finesse:true},
+  'Greatclub': {dmg:'1d8', type:'bludgeoning'},
+  'Handaxe': {dmg:'1d6', type:'slashing'},
+  'Javelin': {dmg:'1d6', type:'piercing'},
+  "Light Hammer": {dmg:'1d4', type:'bludgeoning'},
+  'Mace': {dmg:'1d6', type:'bludgeoning'},
+  'Quarterstaff': {dmg:'1d6', type:'bludgeoning'},
+  'Sickle': {dmg:'1d4', type:'slashing', finesse:true},
+  'Spear': {dmg:'1d6', type:'piercing'},
+  'Light Crossbow': {dmg:'1d8', type:'piercing', ranged:true},
+  'Dart': {dmg:'1d4', type:'piercing', finesse:true, ranged:true},
+  'Shortbow': {dmg:'1d6', type:'piercing', ranged:true},
+  'Sling': {dmg:'1d4', type:'bludgeoning', ranged:true}
+};
+const MARTIAL_WEAPONS = {
+  'Longsword': {dmg:'1d8', type:'slashing'},
+  'Shortsword': {dmg:'1d6', type:'piercing', finesse:true},
+  'Rapier': {dmg:'1d8', type:'piercing', finesse:true},
+  'Warhammer': {dmg:'1d8', type:'bludgeoning'},
+  'Battleaxe': {dmg:'1d8', type:'slashing'},
+  'Greatsword': {dmg:'2d6', type:'slashing'},
+  'Halberd': {dmg:'1d10', type:'slashing'}
+};
+
+const SPELL_DAMAGE = {
+  'Fire Bolt': {die:'d10', type:'fire', attack:true, cantripScales:true},
+  'Acid Splash': {die:'d6', type:'acid', save:'Dex', cantripScales:true},
+  'Poison Spray': {die:'d12', type:'poison', save:'Con', cantripScales:true},
+  'Ray of Frost': {die:'d8', type:'cold', attack:true, cantripScales:true},
+  'Shocking Grasp': {die:'d8', type:'lightning', attack:true, cantripScales:true},
+  'Thorn Whip': {die:'d6', type:'piercing', attack:true, cantripScales:true},
+  "Melf's Acid Arrow": {dice:'2d4', type:'acid', attack:true, note:"+1d4 acid at the end of the target's next turn"},
+  'Flaming Sphere': {dice:'2d6', type:'fire', save:'Dex'},
+  'Ray of Sickness': {dice:'2d8', type:'poison', attack:true},
+  'Scorching Ray': {dice:'2d6', type:'fire', attack:true, note:'per ray, 3 rays'},
+  'Fireball': {dice:'8d6', type:'fire', save:'Dex'},
+  'Lightning Bolt': {dice:'8d6', type:'lightning', save:'Dex'},
+  'Shatter': {dice:'3d8', type:'thunder', save:'Con'},
+  'Thunderwave': {dice:'2d8', type:'thunder', save:'Con'},
+  'Ice Storm': {dice:'2d8+4d6', type:'bludgeoning+cold', save:'Dex'},
+  'Wall of Fire': {dice:'5d8', type:'fire', save:'Dex'},
+  'Cone of Cold': {dice:'8d8', type:'cold', save:'Con'},
+  'Magic Missile': {dice:'3×(1d4+1)', type:'force', note:'automatic hit, no roll needed'},
+  'Blight': {dice:'8d6', type:'necrotic', save:'Con'},
+  'Cloudkill': {dice:'5d8', type:'poison', save:'Con'},
+  'Conjure Barrage': {dice:'3d8', type:'weapon-based', save:'Dex'},
+  'Banishing Smite': {dice:'5d10', type:'force', note:'on a weapon hit'},
+  'Branding Smite': {dice:'2d6', type:'radiant', note:'on a weapon hit'}
+};
+
+function cantripDieCount(level){
+  if(level>=17) return 4;
+  if(level>=11) return 3;
+  if(level>=5) return 2;
+  return 1;
+}
+
+function spellEffectText(name, level){
+  const d = SPELL_DAMAGE[name];
+  if(d){
+    if(d.cantripScales){
+      const count = cantripDieCount(level||1);
+      return `${count}${d.die} ${d.type} ${d.attack ? '(spell attack)' : `(${d.save} save)`}`;
+    }
+    return `${d.dice} ${d.type}${d.attack ? ' (spell attack)' : d.save ? ` (${d.save} save)` : ''}${d.note ? ' — '+d.note : ''}`;
+  }
+  return SPELL_DESCRIPTIONS[name] || '';
+}
+
+const SUBCLASSES = {
+  'Alchemist': {
+    tool: "Alchemist's Supplies",
+    bonusSpells: {3:['Healing Word','Ray of Sickness'], 5:['Flaming Sphere',"Melf's Acid Arrow"], 9:['Gaseous Form','Mass Healing Word'], 13:['Blight','Death Ward'], 17:['Cloudkill','Raise Dead']},
+    features: [
+      {lvl:3, text:"Experimental Elixir: After a long rest, brew a random-effect elixir in a flask (2 at level 6, 3 at level 15) — spend a spell slot to make more and choose the effect."},
+      {lvl:5, text:"Alchemical Savant: Add your Int modifier (min +1) to one healing roll or one acid/fire/necrotic/poison damage roll when you cast through your alchemist's supplies."},
+      {lvl:9, text:"Restorative Reagents: Your elixirs also grant 2d6 + Int temporary HP; cast Lesser Restoration free a number of times equal to your Int modifier per long rest."},
+      {lvl:15, text:"Chemical Mastery: Resistance to acid and poison, immunity to poisoned; cast Greater Restoration or Heal free once per long rest."}
+    ]
+  },
+  'Armorer': {
+    tool: "Smith's Tools",
+    bonusSpells: {3:['Magic Missile','Thunderwave'], 5:['Mirror Image','Shatter'], 9:['Hypnotic Pattern','Lightning Bolt'], 13:['Fire Shield','Greater Invisibility'], 17:['Passwall','Wall of Force']},
+    features: [
+      {lvl:3, text:"Arcane Armor: Turn worn armor into your spellcasting focus and near-permanent second skin (no Str requirement, can't be removed against your will)."},
+      {lvl:3, text:"Armor Model: Choose Guardian (Thunder Gauntlets + Defensive Field temp HP) or Infiltrator (Lightning Launcher + extra speed + Stealth advantage); swap after a rest."},
+      {lvl:5, text:"Extra Attack: Attack twice, rather than once, when you take the Attack action."},
+      {lvl:9, text:"Armor Modifications: Infuse your armor's chest, boots, helmet, and weapon separately, plus 2 extra infused items overall."},
+      {lvl:15, text:"Perfected Armor: Guardian gains a forced-pull reaction against nearby foes; Infiltrator's Lightning Launcher leaves targets glimmering and exposed to your next attack."}
+    ]
+  },
+  'Artillerist': {
+    tool: "Woodcarver's Tools",
+    bonusSpells: {3:['Shield','Thunderwave'], 5:['Scorching Ray','Shatter'], 9:['Fireball','Wind Wall'], 13:['Ice Storm','Wall of Fire'], 17:['Cone of Cold','Wall of Force']},
+    features: [
+      {lvl:3, text:"Eldritch Cannon: Create a Small/Tiny cannon (Flamethrower, Force Ballista, or Protector) as an action; activate it with a bonus action within 60 ft."},
+      {lvl:5, text:"Arcane Firearm: Turn a wand, staff, or rod into a focus that adds a d8 to one damage roll whenever you cast an artificer spell through it."},
+      {lvl:9, text:"Explosive Cannon: Your cannon's damage rolls +1d8; you can detonate it for 3d8 force damage in a 20-ft burst."},
+      {lvl:15, text:"Fortified Position: Half cover for you and allies within 10 ft of your cannon; you can maintain two cannons at once."}
+    ]
+  },
+  'Battle Smith': {
+    tool: "Smith's Tools",
+    bonusSpells: {3:['Heroism','Shield'], 5:['Branding Smite','Warding Bond'], 9:['Aura of Vitality','Conjure Barrage'], 13:['Aura of Purity','Fire Shield'], 17:['Banishing Smite','Mass Cure Wounds']},
+    features: [
+      {lvl:3, text:"Battle Ready: Proficiency with martial weapons; use Intelligence instead of Str/Dex for attack and damage rolls with a magic weapon."},
+      {lvl:3, text:"Steel Defender: A construct companion fights at your side, sharing your initiative and acting on your bonus-action command."},
+      {lvl:5, text:"Extra Attack: Attack twice, rather than once, when you take the Attack action."},
+      {lvl:9, text:"Arcane Jolt: On a hit (yours or your defender's), deal 2d6 extra force damage or heal 2d6 HP — Int-modifier times per long rest."},
+      {lvl:15, text:"Improved Defender: Arcane Jolt increases to 4d6; your defender gains +2 AC and punishes attackers it deflects."}
+    ]
+  }
+};
 
 function activeSpellListKey(){
   const classKey = document.getElementById('buildClass') ? document.getElementById('buildClass').value : '';
@@ -879,7 +1157,10 @@ function activeSpellListKey(){
 
 function populateSpellNameSelect(selectEl, level, preferredName){
   const listKey = activeSpellListKey();
-  const options = (listKey && SPELL_LISTS[listKey][level]) ? SPELL_LISTS[listKey][level] : [];
+  let options = (listKey && SPELL_LISTS[listKey][level]) ? [...SPELL_LISTS[listKey][level]] : [];
+  if(ACTIVE.bg && ACTIVE.bg.guildSpells && ACTIVE.bg.guildSpells[level]){
+    options = [...new Set([...options, ...ACTIVE.bg.guildSpells[level]])];
+  }
   selectEl.innerHTML = '';
   if(options.length === 0){
     const o = document.createElement('option');
@@ -911,6 +1192,8 @@ function populateSpellNameSelect(selectEl, level, preferredName){
 
 function makeAttackRow(vals={}){
   const tr = document.createElement('tr');
+  if(vals.managedWeapon) tr.dataset.managedWeapon = 'true';
+  if(vals.managedCantripAttack) tr.dataset.managedCantripAttack = vals.managedCantripAttack;
   tr.innerHTML = `
     <td><input type="text" class="atk-name" value="${vals.name||''}"></td>
     <td><input type="text" class="atk-bonus" value="${vals.bonus||''}"></td>
@@ -920,6 +1203,9 @@ function makeAttackRow(vals={}){
 }
 function makeSpellRow(vals={}){
   const tr = document.createElement('tr');
+  if(vals.subclassBonus) tr.dataset.subclassBonus = vals.subclassBonus;
+  if(vals.managedCantrip) tr.dataset.managedCantrip = vals.managedCantrip;
+  if(vals.managedGuildSpell) tr.dataset.managedGuildSpell = vals.managedGuildSpell;
   const lvl = vals.level!==undefined ? String(vals.level) : '0';
   let opts = '';
   ['C','1','2','3','4','5','6','7','8','9'].forEach(l=>{
@@ -934,14 +1220,16 @@ function makeSpellRow(vals={}){
       <input type="text" class="spell-name-custom" placeholder="Custom spell name" value="${vals.name||''}" style="${customVisible?'':'display:none'}; margin-top:3px;">
     </td>
     <td style="text-align:center"><input type="checkbox" class="spell-prep" ${vals.prep?'checked':''}></td>
+    <td class="spell-effect"><span></span></td>
     <td><input type="text" class="spell-notes" value="${vals.notes||''}"></td>
-    <td><button class="btn small danger" type="button" onclick="this.closest('tr').remove()">✕</button></td>`;
+    <td><button class="btn small danger" type="button" onclick="this.closest('tr').remove(); updatePreparedCounter();">✕</button></td>`;
 
   const levelSel = tr.querySelector('.spell-level');
   const nameSel = tr.querySelector('.spell-name-select');
   const customInput = tr.querySelector('.spell-name-custom');
 
   populateSpellNameSelect(nameSel, parseInt(lvl,10), vals.name);
+  updateSpellEffect(tr);
 
   nameSel.addEventListener('change', ()=>{
     if(nameSel.value === CUSTOM_SPELL){
@@ -951,14 +1239,39 @@ function makeSpellRow(vals={}){
       customInput.style.display='none';
       customInput.value='';
     }
+    updateSpellEffect(tr);
   });
+  customInput.addEventListener('input', ()=>updateSpellEffect(tr));
   levelSel.addEventListener('change', ()=>{
     populateSpellNameSelect(nameSel, parseInt(levelSel.value,10), null);
     customInput.style.display='none';
     customInput.value='';
+    updateSpellEffect(tr);
+    const prepBox = tr.querySelector('.spell-prep');
+    if(prepBox.checked && countsTowardPrepared(tr)){
+      const limit = preparedLimit();
+      if(limit !== null && countPreparedSpells() > limit){
+        prepBox.checked = false;
+        flashPreparedWarning(limit);
+      }
+    }
+    updatePreparedCounter();
   });
 
   return tr;
+}
+function currentRowSpellName(tr){
+  const nameSel = tr.querySelector('.spell-name-select');
+  const customInput = tr.querySelector('.spell-name-custom');
+  return (nameSel.value === CUSTOM_SPELL) ? customInput.value : nameSel.value;
+}
+function updateSpellEffect(tr){
+  const name = currentRowSpellName(tr);
+  const span = tr.querySelector('.spell-effect span');
+  if(span) span.textContent = name ? spellEffectText(name, (typeof ACTIVE!=='undefined' && ACTIVE.level) || 1) : '';
+}
+function refreshAllSpellEffects(){
+  spellsBody.querySelectorAll('tr').forEach(updateSpellEffect);
 }
 function refreshAllSpellNameOptions(){
   spellsBody.querySelectorAll('tr').forEach(tr=>{
@@ -987,6 +1300,56 @@ for(let lvl=1; lvl<=9; lvl++){
     <td><input type="text" class="mono" name="slotExpended_${lvl}"></td>`;
   slotsBody.appendChild(tr);
 }
+
+// ---------- prepared spell limit ----------
+function preparedLimit(){
+  if(!ACTIVE.cls) return null;
+  const abilityKey = document.querySelector('[name="spellAbility"]')?.value;
+  if(!abilityKey) return null;
+  const mod = currentAbilityMod(abilityKey);
+  const classLevelStr = document.querySelector('[name="classLevel"]')?.value || '';
+  const lvlMatch = classLevelStr.match(/(\d+)/);
+  const lvl = lvlMatch ? parseInt(lvlMatch[1],10) : 1;
+  return Math.max(1, mod + Math.floor(lvl/2));
+}
+function countsTowardPrepared(tr){
+  const lvlSel = tr.querySelector('.spell-level');
+  if(!lvlSel || lvlSel.value === '0') return false; // cantrips are always available, never "prepared"
+  if(tr.dataset.subclassBonus) return false; // always-prepared subclass bonus spells are free
+  return true;
+}
+function countPreparedSpells(){
+  return [...spellsBody.querySelectorAll('tr')].filter(tr=>countsTowardPrepared(tr) && tr.querySelector('.spell-prep').checked).length;
+}
+function updatePreparedCounter(){
+  const counterEl = document.getElementById('preparedCounter');
+  if(!counterEl) return;
+  const limit = preparedLimit();
+  if(limit === null){ counterEl.textContent = ''; counterEl.classList.remove('at-limit'); return; }
+  const used = countPreparedSpells();
+  counterEl.textContent = `${used} / ${limit} spells prepared`;
+  counterEl.classList.toggle('at-limit', used >= limit);
+}
+function flashPreparedWarning(limit){
+  const warn = document.getElementById('preparedWarning');
+  if(!warn) return;
+  warn.textContent = `Limit reached — you can only prepare ${limit} spell${limit===1?'':'s'} at your level. Uncheck one first.`;
+  warn.classList.add('show');
+  clearTimeout(warn._hideTimer);
+  warn._hideTimer = setTimeout(()=>warn.classList.remove('show'), 3500);
+}
+spellsBody.addEventListener('change', (e)=>{
+  if(!e.target.classList.contains('spell-prep')) return;
+  const tr = e.target.closest('tr');
+  if(e.target.checked && countsTowardPrepared(tr)){
+    const limit = preparedLimit();
+    if(limit !== null && countPreparedSpells() > limit){
+      e.target.checked = false;
+      flashPreparedWarning(limit);
+    }
+  }
+  updatePreparedCounter();
+});
 
 // ---------- recalculation ----------
 function recalc(){
@@ -1045,6 +1408,8 @@ function recalc(){
   } else {
     dcEl.textContent = '— / —';
   }
+
+  updatePreparedCounter();
 }
 
 document.getElementById('sheet').addEventListener('input', recalc);
@@ -1099,6 +1464,9 @@ const CLASSES = {
     spellAbility: 'int',
     subclassLevel: 3,
     subclassOptions: ['Alchemist','Armorer','Artillerist','Battle Smith'],
+    subclasses: SUBCLASSES,
+    startingGoldFormula: '5d4 × 10 gp',
+    startingGoldAverage: 125,
     features: [
       {lvl:1, text:"Magical Tinkering: As an action, touch a Tiny nonmagical object and give it a minor magical property (light, sound, sensor message, or the appearance of a mystical mark)."},
       {lvl:1, text:"Spellcasting: Intelligence-based, prepared caster. Requires thieves'/artisan's tools in hand to cast."},
@@ -1155,9 +1523,24 @@ const BACKGROUNDS = {
     equipment: "A Simic insignia, commoner's clothes, a book of research notes, an ink pen, a bottle of squid ink, a flask of oil, a vial of acid, a vial of fish scales, a vial of seaweed, a vial of jellyfish stingers, a glass bottle of unidentified slime, and a belt pouch containing 10 gp.",
     startingGp: 10,
     features: [
-      "Researcher: When you try to recall or learn a magical or scientific fact you don't already know, you know where or from whom you can obtain it — usually a Simic lab, Izzet facility, library, university, or independent scholar.",
-      "You belong to a Simic research clade or project (pick or roll one: Hull, Fin, Gyre, Guardian Project, Crypsis Project, or independent research)."
-    ]
+      "Researcher: When you try to recall or learn a magical or scientific fact you don't already know, you know where or from whom you can obtain it — usually a Simic lab, Izzet facility, library, university, or independent scholar."
+    ],
+    cladeOptions: [
+      'Hull Clade (protection & durability)',
+      'Fin Clade (movement)',
+      'Gyre Clade (cyclical patterns & metamagic)',
+      'Guardian Project (guard monsters & super-soldiers)',
+      'Crypsis Project (intelligence & counterintelligence)',
+      'Independent research'
+    ],
+    guildSpells: {
+      0: ['Acid Splash','Druidcraft'],
+      1: ['Detect Poison and Disease','Expeditious Retreat','Jump'],
+      2: ['Alter Self','Enhance Ability','Enlarge/Reduce'],
+      3: ['Gaseous Form','Water Breathing','Wind Wall'],
+      4: ['Freedom of Movement','Polymorph'],
+      5: ['Creation']
+    }
   }
 };
 
@@ -1280,6 +1663,15 @@ function updateAsiVisibility(){
   });
 }
 
+function updateEquipModeVisibility(){
+  const modeEl = document.querySelector('[name="choice_equipMode"]:checked');
+  const mode = modeEl ? modeEl.value : 'package';
+  const packageRow = document.getElementById('equipPackageRow');
+  const goldRow = document.getElementById('equipGoldRow');
+  if(packageRow) packageRow.style.display = mode==='package' ? '' : 'none';
+  if(goldRow) goldRow.style.display = mode==='gold' ? '' : 'none';
+}
+
 function markRequiredFields(){
   document.querySelectorAll('#choicesItems select').forEach(sel=>{
     const row = sel.closest('.choice-row');
@@ -1318,8 +1710,10 @@ function regenerateAutoText(){
       classSkillNames.push(k ? SKILLS.find(s=>s.key===k).name : '(not yet chosen)');
     }
     featureLines.push(`Skill choices: ${classSkillNames.join(', ')}`);
+    let subKey = null;
     if(cls.subclassLevel && level >= cls.subclassLevel){
-      featureLines.push(`Subclass: ${val('choice_subclass') || '(not yet chosen)'}`);
+      subKey = val('choice_subclass') || null;
+      featureLines.push(`Subclass: ${subKey || '(not yet chosen)'}`);
     }
     featureLines.push('');
 
@@ -1328,11 +1722,31 @@ function regenerateAutoText(){
     for(let i=0;i<tbl.cantrips;i++) cantripNames.push(val(`choice_cantrip_${i}`) || '(not yet chosen)');
     featureLines.push(`Cantrips known: ${cantripNames.join(', ')}`);
     featureLines.push('');
+
+    if(subKey && cls.subclasses && cls.subclasses[subKey]){
+      const sub = cls.subclasses[subKey];
+      featureLines.push(`SUBCLASS — ${subKey}`);
+      featureLines.push(`Tool proficiency: ${sub.tool}`);
+      sub.features.filter(f=>f.lvl<=level).forEach(f=>featureLines.push(`• (Lvl ${f.lvl}) ${f.text}`));
+      const bonusSoFar = [];
+      Object.keys(sub.bonusSpells).forEach(lvlStr=>{
+        const lvl = parseInt(lvlStr,10);
+        if(lvl<=level) bonusSoFar.push(`Lvl ${lvl}: ${sub.bonusSpells[lvl].join(', ')}`);
+      });
+      if(bonusSoFar.length) featureLines.push(`Always-prepared bonus spells — ${bonusSoFar.join('; ')} (auto-added to your Spells table).`);
+      featureLines.push('');
+    }
   }
 
   if(bg){
     featureLines.push(`BACKGROUND — ${bg.name}`);
     bg.features.forEach(f=>featureLines.push('• ' + f));
+    if(bg.cladeOptions){
+      featureLines.push(`Research focus: ${val('choice_bgClade') || '(not yet chosen)'}`);
+    }
+    if(bg.guildSpells){
+      featureLines.push(`Simic Guild Spells: added to your spell list (available to know/prepare like any other artificer spell) — ${Object.entries(bg.guildSpells).map(([l,names])=>`Lvl ${l}: ${names.join(', ')}`).join('; ')}.`);
+    }
     const bgLangs = [];
     for(let i=0;i<bg.numLanguages;i++) bgLangs.push(val(`choice_lang_bg_${i}`) || '(not yet chosen)');
     featureLines.push(`Languages: ${bgLangs.join(', ')}`);
@@ -1348,24 +1762,231 @@ function regenerateAutoText(){
     for(let i=0;i<race.numRacialLanguages;i++) racialLangs.push(val(`choice_lang_racial_${i}`) || '(not yet chosen)');
     const bgLangs = [];
     if(bg) for(let i=0;i<bg.numLanguages;i++) bgLangs.push(val(`choice_lang_bg_${i}`) || '(not yet chosen)');
+    const subKey2 = (cls.subclassLevel && level >= cls.subclassLevel) ? val('choice_subclass') : null;
+    const subTool = (subKey2 && cls.subclasses && cls.subclasses[subKey2]) ? `, ${cls.subclasses[subKey2].tool} (subclass)` : '';
     setAutoBlock(profsTa, [
       `Armor: ${cls.armor}`,
       `Weapons: ${cls.weapons}`,
-      `Tools: ${cls.tools}, ${racialTool} (racial)`,
+      `Tools: ${cls.tools}, ${racialTool} (racial)${subTool}`,
       `Saving Throws: ${cls.saves.map(k=>k.toUpperCase()).join(', ')}`,
       `Languages: Common, ${race.name}, ${racialLangs.join(', ')}${bg ? '; '+bgLangs.join(', ')+' (background)' : ''}`
     ].join('\n'));
   }
 }
 
-function handleChoiceChange(){
+let managedSubclassSpellNames = new Set();
+
+function syncSubclassBonusSpells(){
+  const newSet = new Set();
+  if(ACTIVE.cls && ACTIVE.cls.subclasses){
+    const subKey = document.querySelector('[name="choice_subclass"]');
+    const sub = (subKey && subKey.value) ? ACTIVE.cls.subclasses[subKey.value] : null;
+    if(sub){
+      Object.keys(sub.bonusSpells).forEach(lvlStr=>{
+        const lvl = parseInt(lvlStr,10);
+        if(lvl <= ACTIVE.level) sub.bonusSpells[lvl].forEach(name=>newSet.add(name));
+      });
+    }
+  }
+  managedSubclassSpellNames.forEach(name=>{
+    if(!newSet.has(name)){
+      const row = [...spellsBody.querySelectorAll('tr')].find(tr=>tr.dataset.subclassBonus===name);
+      if(row) row.remove();
+    }
+  });
+  newSet.forEach(name=>{
+    const exists = [...spellsBody.querySelectorAll('tr')].some(tr=>tr.dataset.subclassBonus===name);
+    if(!exists){
+      const lvl = spellLevelOf(name);
+      const tr = makeSpellRow({level:String(lvl), name, prep:true, notes:'Subclass bonus — always prepared, free of your prepared-spell count.'});
+      tr.dataset.subclassBonus = name;
+      spellsBody.appendChild(tr);
+    }
+  });
+  managedSubclassSpellNames = newSet;
+}
+
+let managedGuildSpellNames = new Set();
+
+function syncGuildSpellChoices(){
+  const newSet = new Set();
+  document.querySelectorAll('[name^="choice_guildspell_"]:checked').forEach(cb=>{
+    const [name] = cb.value.split('|');
+    newSet.add(name);
+  });
+  managedGuildSpellNames.forEach(name=>{
+    if(!newSet.has(name)){
+      const row = [...spellsBody.querySelectorAll('tr')].find(tr=>tr.dataset.managedGuildSpell===name);
+      if(row) row.remove();
+    }
+  });
+  newSet.forEach(name=>{
+    const exists = [...spellsBody.querySelectorAll('tr')].some(tr=>tr.dataset.managedGuildSpell===name);
+    if(!exists){
+      const lvl = spellLevelOf(name);
+      const tr = makeSpellRow({level:String(lvl), name, prep:false, notes:`From ${ACTIVE.bg ? ACTIVE.bg.name : 'background'} bonus spell access.`});
+      tr.dataset.managedGuildSpell = name;
+      spellsBody.appendChild(tr);
+    }
+  });
+  managedGuildSpellNames = newSet;
+}
+
+let managedCantripSpellNames = new Set();
+let managedCantripAttackNames = new Set();
+
+function syncCantripChoices(){
+  if(!ACTIVE.cls) return;
+  const tbl = ACTIVE.cls.slots[ACTIVE.level];
+  const chosen = [];
+  for(let i=0;i<tbl.cantrips;i++){
+    const v = document.querySelector(`[name="choice_cantrip_${i}"]`)?.value;
+    if(v) chosen.push(v);
+  }
+  const newSpellSet = new Set(chosen);
+  managedCantripSpellNames.forEach(name=>{
+    if(!newSpellSet.has(name)){
+      const row = [...spellsBody.querySelectorAll('tr')].find(tr=>tr.dataset.managedCantrip===name);
+      if(row) row.remove();
+    }
+  });
+  newSpellSet.forEach(name=>{
+    const exists = [...spellsBody.querySelectorAll('tr')].some(tr=>tr.dataset.managedCantrip===name);
+    if(!exists){
+      const tr = makeSpellRow({level:'0', name, prep:true, notes:'Cantrip — always available, no slot used.'});
+      tr.dataset.managedCantrip = name;
+      spellsBody.appendChild(tr);
+    }
+  });
+  managedCantripSpellNames = newSpellSet;
+
+  const newAtkSet = new Set(chosen.filter(name=>SPELL_DAMAGE[name] && SPELL_DAMAGE[name].attack));
+  managedCantripAttackNames.forEach(name=>{
+    if(!newAtkSet.has(name)){
+      const row = [...attacksBody.querySelectorAll('tr')].find(tr=>tr.dataset.managedCantripAttack===name);
+      if(row) row.remove();
+    }
+  });
+  newAtkSet.forEach(name=>{
+    const exists = [...attacksBody.querySelectorAll('tr')].some(tr=>tr.dataset.managedCantripAttack===name);
+    if(!exists){
+      const dmg = SPELL_DAMAGE[name];
+      const spellMod = currentAbilityMod(ACTIVE.cls.spellAbility);
+      const pb = profBonusFor(document.querySelector('[name="classLevel"]').value);
+      const count = cantripDieCount(ACTIVE.level);
+      const tr = makeAttackRow({name, bonus: fmt(pb+spellMod), dmg: `${count}${dmg.die} ${dmg.type}`});
+      tr.dataset.managedCantripAttack = name;
+      attacksBody.appendChild(tr);
+    }
+  });
+  managedCantripAttackNames = newAtkSet;
+}
+
+function syncWeaponAttack(){
+  const modeEl = document.querySelector('[name="choice_equipMode"]:checked');
+  const mode = modeEl ? modeEl.value : 'package';
+  const weaponName = mode==='package' ? document.querySelector('[name="choice_weapon"]')?.value : '';
+  const existing = [...attacksBody.querySelectorAll('tr')].find(tr=>tr.dataset.managedWeapon);
+  if(!weaponName){
+    if(existing) existing.remove();
+    return;
+  }
+  const w = WEAPONS[weaponName] || MARTIAL_WEAPONS[weaponName];
+  if(!w) return;
+  const strMod = currentAbilityMod('str');
+  const dexMod = currentAbilityMod('dex');
+  const mod = w.finesse ? Math.max(strMod,dexMod) : (w.ranged ? dexMod : strMod);
+  const pb = profBonusFor(document.querySelector('[name="classLevel"]').value);
+  const atkBonus = fmt(pb + mod);
+  const dmgText = `${w.dmg} ${fmt(mod)} ${w.type}`;
+  if(existing){
+    existing.querySelector('.atk-name').value = weaponName;
+    existing.querySelector('.atk-bonus').value = atkBonus;
+    existing.querySelector('.atk-dmg').value = dmgText;
+  } else {
+    const tr = makeAttackRow({name:weaponName, bonus:atkBonus, dmg:dmgText});
+    tr.dataset.managedWeapon = 'true';
+    attacksBody.appendChild(tr);
+  }
+}
+
+function applyHitPointsAndGold(){
+  if(!ACTIVE.cls) return;
+  const lastConfirmedEl = document.querySelector('[name="lastConfirmedLevel"]');
+  const lastConfirmed = parseInt(lastConfirmedEl.value,10) || 0;
+  const conMod = currentAbilityMod('con');
+  const hpMaxEl = document.querySelector('[name="hpMax"]');
+  let hpMax = parseInt(hpMaxEl.value,10);
+  if(isNaN(hpMax)) hpMax = 0;
+  const average = Math.floor(ACTIVE.cls.hitDie/2) + 1;
+
+  if(lastConfirmed === 0){
+    hpMax = ACTIVE.cls.hitDie + conMod;
+    for(let l=2; l<=ACTIVE.level; l++){
+      const rollEl = document.querySelector(`[name="choice_hproll_${l}"]`);
+      const rollVal = (rollEl && rollEl.value) ? (parseInt(rollEl.value,10) || average) : average;
+      hpMax += rollVal + conMod;
+    }
+  } else if(ACTIVE.level > lastConfirmed){
+    for(let l=lastConfirmed+1; l<=ACTIVE.level; l++){
+      const rollEl = document.querySelector(`[name="choice_hproll_${l}"]`);
+      const rollVal = (rollEl && rollEl.value) ? (parseInt(rollEl.value,10) || average) : average;
+      hpMax += rollVal + conMod;
+    }
+  }
+  hpMaxEl.value = hpMax;
+  if(!document.querySelector('[name="hpCurrent"]').value){
+    document.querySelector('[name="hpCurrent"]').value = hpMax;
+  }
+  lastConfirmedEl.value = ACTIVE.level;
+
+  const modeEl = document.querySelector('[name="choice_equipMode"]:checked');
+  const goldAppliedEl = document.querySelector('[name="classGoldApplied"]');
+  if(modeEl && modeEl.value==='gold' && goldAppliedEl.value!=='1'){
+    const rollEl = document.querySelector('[name="choice_goldroll"]');
+    const amount = (rollEl && rollEl.value) ? (parseInt(rollEl.value,10) || ACTIVE.cls.startingGoldAverage) : ACTIVE.cls.startingGoldAverage;
+    const gpEl = document.querySelector('[name="gp"]');
+    gpEl.value = (parseInt(gpEl.value,10)||0) + amount;
+    goldAppliedEl.value = '1';
+  }
+}
+
+function liveChoiceUpdate(){
   if(!ACTIVE.cls && !ACTIVE.race && !ACTIVE.bg) return;
   updateAsiVisibility();
+  updateEquipModeVisibility();
+  markRequiredFields();
+}
+
+function commitChoices(){
+  if(!ACTIVE.cls && !ACTIVE.race && !ACTIVE.bg) return;
+  updateAsiVisibility();
+  updateEquipModeVisibility();
   markRequiredFields();
   syncManagedSkills();
   recomputeClassBonuses();
+  syncSubclassBonusSpells();
+  syncCantripChoices();
+  syncGuildSpellChoices();
+  syncWeaponAttack();
+  applyHitPointsAndGold();
   regenerateAutoText();
+  refreshAllSpellEffects();
   recalc();
+
+  const status = document.getElementById('confirmStatus');
+  if(status){
+    const allDefault = ABILITIES.every(a=>{
+      const el = document.querySelector(`[name="score_${a.key}"]`);
+      return el && (el.value === '10' || el.value === '');
+    });
+    status.textContent = allDefault
+      ? '✓ Sheet updated — reminder: your ability scores are still all 10, don\'t forget to enter your rolled scores!'
+      : '✓ Sheet updated';
+    status.classList.add('show');
+    clearTimeout(status._hideTimer);
+    status._hideTimer = setTimeout(()=>status.classList.remove('show'), allDefault ? 6000 : 2500);
+  }
 }
 
 function renderChoicesPanel(race, cls, bg, level){
@@ -1381,9 +2002,89 @@ function renderChoicesPanel(race, cls, bg, level){
 
   let html = '';
 
+  const lastConfirmed = parseInt(document.querySelector('[name="lastConfirmedLevel"]').value, 10) || 0;
+
+  if(lastConfirmed === 0){
+    html += `<div class="prompt-banner">
+      <div class="choice-group-title">Step 1 — Enter your ability scores</div>
+      Roll your six ability scores yourself (4d6 drop lowest, standard array, or point buy — however your table plays) and
+      type the results into the <strong>Ability Scores</strong> panel on the left. Everything else on this sheet — HP,
+      saving throws, skill bonuses, spell save DC — is calculated from those numbers, so it's worth doing first.
+      <div><button class="btn small" type="button" id="btnJumpToScores">↑ Jump to Ability Scores</button></div>
+    </div>`;
+  }
+
+  if(cls && lastConfirmed > 0 && level > lastConfirmed){
+    const newLines = [];
+    cls.features.filter(f=>f.lvl>lastConfirmed && f.lvl<=level).forEach(f=>{
+      newLines.push(f.asi ? `Lvl ${f.lvl}: Ability Score Improvement` : `Lvl ${f.lvl}: ${f.text.split(':')[0]}`);
+    });
+    const prevTbl = cls.slots[lastConfirmed], curTbl = cls.slots[level];
+    if(prevTbl && curTbl && curTbl.cantrips > prevTbl.cantrips) newLines.push(`+${curTbl.cantrips-prevTbl.cantrips} new cantrip known`);
+    if(prevTbl && curTbl && Object.keys(curTbl.slots).length > Object.keys(prevTbl.slots).length) newLines.push('New spell level unlocked — review your prepared spells');
+    if(newLines.length){
+      html += `<div class="new-since-banner"><div class="choice-group-title">New since level ${lastConfirmed}</div>${newLines.join('<br>')}</div>`;
+    }
+  }
+
+  if(cls){
+    const rollFrom = Math.max(2, lastConfirmed+1);
+    if(level >= rollFrom){
+      const avg = Math.floor(cls.hitDie/2)+1;
+      html += `<div class="choice-group"><div class="choice-group-title">Hit Points — roll for new levels</div>`;
+      for(let l=rollFrom; l<=level; l++){
+        html += `<div class="choice-row"><label class="inline">Level ${l} (d${cls.hitDie})</label><input type="text" name="choice_hproll_${l}" placeholder="roll, or leave blank for average (${avg})"></div>`;
+      }
+      html += `</div>`;
+    }
+  }
+
+  if(cls && lastConfirmed === 0){
+    const weaponOptions = Object.keys(WEAPONS);
+    const subKeyNow = document.querySelector('[name="choice_subclass"]')?.value;
+    if(subKeyNow === 'Battle Smith' && level >= 3) weaponOptions.push(...Object.keys(MARTIAL_WEAPONS));
+    html += `<div class="choice-group"><div class="choice-group-title">Starting Equipment</div>
+      <div class="choice-row">
+        <span class="radio-opt"><input type="radio" name="choice_equipMode" value="package" id="equipModePackage"><label for="equipModePackage">Take equipment package</label></span>
+        <span class="radio-opt"><input type="radio" name="choice_equipMode" value="gold" id="equipModeGold"><label for="equipModeGold">Take ${cls.startingGoldFormula} instead</label></span>
+      </div>
+      <div class="choice-row" id="equipPackageRow" style="display:none;">
+        <label class="inline">Starting weapon</label>${buildSelect('choice_weapon', weaponOptions, null, n=>{
+          const w = WEAPONS[n]||MARTIAL_WEAPONS[n]; return w ? `${w.dmg} ${w.type}${w.finesse?' (finesse)':''}${w.ranged?' (ranged)':''}` : '';
+        })}
+      </div>
+      <div class="choice-row" id="equipGoldRow" style="display:none;">
+        <label class="inline">Gold roll</label><input type="text" name="choice_goldroll" placeholder="roll ${cls.startingGoldFormula}, or leave blank for average (${cls.startingGoldAverage} gp)">
+      </div>
+    </div>`;
+  }
+
   if(bg){
     html += `<div class="choice-group"><div class="choice-group-title">Background Skills (fixed)</div>
       <div>${bg.skills.map(k=>`<span class="choice-badge">${SKILLS.find(s=>s.key===k).name}</span>`).join('')}</div></div>`;
+    if(bg.cladeOptions){
+      html += `<div class="choice-group"><div class="choice-group-title">${bg.name} — Research Focus</div>
+        <div class="choice-row">${buildSelect('choice_bgClade', bg.cladeOptions)}</div></div>`;
+    }
+    if(bg.guildSpells){
+      const lvlLabel = l => l==='0' || l===0 ? 'Cantrip' : `Lvl ${l}`;
+      let rows = '';
+      Object.keys(bg.guildSpells).forEach(lvlStr=>{
+        bg.guildSpells[lvlStr].forEach(name=>{
+          const safeId = `guildspell_${name.replace(/[^a-zA-Z0-9]/g,'')}`;
+          rows += `<label class="spell-grant-item" title="${(SPELL_DESCRIPTIONS[name]||'').replace(/"/g,'&quot;')}">
+            <input type="checkbox" name="choice_guildspell_${safeId}" value="${name}|${lvlStr}">
+            <span class="lvl-tag">${lvlLabel(lvlStr)}</span>
+            <span><strong>${name}</strong> — ${spellEffectText(name, level) || 'see hover for details'}</span>
+          </label>`;
+        });
+      });
+      html += `<div class="choice-group"><div class="choice-group-title">🎁 ${bg.name} grants bonus spell access</div>
+        <div class="choice-static" style="margin-bottom:6px;">Your background adds these to your available spell list — check any you want on
+        your sheet. Cantrips are always available; leveled spells still need a free prepared slot like any other spell.</div>
+        ${rows}
+      </div>`;
+    }
   }
 
   if(cls){
@@ -1419,7 +2120,10 @@ function renderChoicesPanel(race, cls, bg, level){
   if(cls){
     const tbl = cls.slots[level];
     const classKey = document.getElementById('buildClass').value;
-    const cantripOpts = (SPELL_LISTS[classKey] && SPELL_LISTS[classKey][0]) || [];
+    let cantripOpts = (SPELL_LISTS[classKey] && SPELL_LISTS[classKey][0]) || [];
+    if(bg && bg.guildSpells && bg.guildSpells[0]){
+      cantripOpts = [...new Set([...cantripOpts, ...bg.guildSpells[0]])];
+    }
     html += `<div class="choice-group"><div class="choice-group-title">Cantrips Known (choose ${tbl.cantrips})</div>`;
     for(let i=0;i<tbl.cantrips;i++){
       html += `<div class="choice-row"><label class="inline">Cantrip ${i+1}</label>${buildSelect(`choice_cantrip_${i}`, cantripOpts, null, n=>SPELL_DESCRIPTIONS[n])}</div>`;
@@ -1428,7 +2132,10 @@ function renderChoicesPanel(race, cls, bg, level){
 
     if(cls.subclassLevel && level >= cls.subclassLevel){
       html += `<div class="choice-group"><div class="choice-group-title">${cls.name} Specialist (Subclass)</div>
-        <div class="choice-row">${buildSelect('choice_subclass', cls.subclassOptions)}</div></div>`;
+        <div class="choice-row">${buildSelect('choice_subclass', cls.subclassOptions, null, n=>{
+          const sub = cls.subclasses && cls.subclasses[n];
+          return sub ? `Tool: ${sub.tool}. Grants bonus always-prepared spells at levels 3/5/9/13/17.` : '';
+        })}</div></div>`;
     }
   }
 
@@ -1463,7 +2170,14 @@ function renderChoicesPanel(race, cls, bg, level){
     else el.value = p;
   });
 
+  const equipModeRadios = container.querySelectorAll('[name="choice_equipMode"]');
+  if(equipModeRadios.length && ![...equipModeRadios].some(r=>r.checked)){
+    const pkg = container.querySelector('[name="choice_equipMode"][value="package"]');
+    if(pkg) pkg.checked = true;
+  }
+
   updateAsiVisibility();
+  updateEquipModeVisibility();
   markRequiredFields();
 
   sub.textContent = `${cls?cls.name:''} — Level ${level}`;
@@ -1479,6 +2193,16 @@ function applyBuild(){
   const race = RACES[raceKey] || null;
   const cls = CLASSES[classKey] || null;
   const bg = BACKGROUNDS[bgKey] || null;
+
+  const lastBuildRace = document.querySelector('[name="lastBuildRace"]');
+  const lastBuildClass = document.querySelector('[name="lastBuildClass"]');
+  const lastBuildBg = document.querySelector('[name="lastBuildBackground"]');
+  const isFreshBuild = (lastBuildRace.value !== raceKey || lastBuildClass.value !== classKey || lastBuildBg.value !== bgKey);
+  if(isFreshBuild){
+    document.querySelector('[name="lastConfirmedLevel"]').value = '0';
+    document.querySelector('[name="classGoldApplied"]').value = '0';
+  }
+  lastBuildRace.value = raceKey; lastBuildClass.value = classKey; lastBuildBg.value = bgKey;
 
   ACTIVE.race = race; ACTIVE.cls = cls; ACTIVE.bg = bg; ACTIVE.level = level;
 
@@ -1511,20 +2235,32 @@ function applyBuild(){
     if(gpEl && !gpEl.value) gpEl.value = bg.startingGp;
     const equipTa = document.querySelector('[name="equipment"]');
     if(equipTa){
-      setAutoBlock(equipTa, `${bg.name} starting gear: ${bg.equipment}\n\nPlus your ${cls?cls.name:'class'} starting equipment (choose per class options).`);
+      setAutoBlock(equipTa, `${bg.name} starting gear: ${bg.equipment}\n\nPlus your ${cls?cls.name:'class'} starting equipment — pick a weapon or gold below, then Confirm.`);
     }
   }
 
   renderChoicesPanel(race, cls, bg, level);
-  handleChoiceChange();
   refreshAllSpellNameOptions();
+  refreshAllSpellEffects();
+  recalc();
 }
 
 document.getElementById('btnApplyBuild').onclick = applyBuild;
 ['buildRace','buildClass','buildBackground'].forEach(id=>{
   document.getElementById(id).addEventListener('change', applyBuild);
 });
-document.getElementById('choicesItems').addEventListener('change', handleChoiceChange);
+document.getElementById('choicesItems').addEventListener('change', liveChoiceUpdate);
+document.getElementById('choicesItems').addEventListener('click', (e)=>{
+  if(e.target && e.target.id==='btnJumpToScores'){
+    const el = document.getElementById('abilityScoresCard');
+    if(el){
+      el.scrollIntoView({behavior:'smooth', block:'center'});
+      el.classList.add('attention-pulse');
+      setTimeout(()=>el.classList.remove('attention-pulse'), 2800);
+    }
+  }
+});
+document.getElementById('btnConfirmChoices').addEventListener('click', commitChoices);
 
 // ---------- save / load ----------
 function gatherData(){
@@ -1537,7 +2273,9 @@ function gatherData(){
   const attacks = [...attacksBody.querySelectorAll('tr')].map(tr=>({
     name: tr.querySelector('.atk-name').value,
     bonus: tr.querySelector('.atk-bonus').value,
-    dmg: tr.querySelector('.atk-dmg').value
+    dmg: tr.querySelector('.atk-dmg').value,
+    managedWeapon: tr.dataset.managedWeapon || null,
+    managedCantripAttack: tr.dataset.managedCantripAttack || null
   }));
   const spells = [...spellsBody.querySelectorAll('tr')].map(tr=>{
     const nameSel = tr.querySelector('.spell-name-select');
@@ -1547,7 +2285,10 @@ function gatherData(){
       level: tr.querySelector('.spell-level').value,
       name,
       prep: tr.querySelector('.spell-prep').checked,
-      notes: tr.querySelector('.spell-notes').value
+      notes: tr.querySelector('.spell-notes').value,
+      subclassBonus: tr.dataset.subclassBonus || null,
+      managedCantrip: tr.dataset.managedCantrip || null,
+      managedGuildSpell: tr.dataset.managedGuildSpell || null
     };
   });
   return {fields, attacks, spells, _type:'dnd5e-character', _version:1};
@@ -1595,10 +2336,16 @@ function loadData(data){
 
   if(ACTIVE.race || ACTIVE.cls || ACTIVE.bg){
     managedSkillKeys = new Set();
+    managedSubclassSpellNames = new Set((data.spells||[]).filter(s=>s.subclassBonus).map(s=>s.subclassBonus));
+    managedCantripSpellNames = new Set((data.spells||[]).filter(s=>s.managedCantrip).map(s=>s.managedCantrip));
+    managedGuildSpellNames = new Set((data.spells||[]).filter(s=>s.managedGuildSpell).map(s=>s.managedGuildSpell));
+    managedCantripAttackNames = new Set((data.attacks||[]).filter(a=>a.managedCantripAttack).map(a=>a.managedCantripAttack));
     updateAsiVisibility();
+    updateEquipModeVisibility();
     markRequiredFields();
     syncManagedSkills();
     recomputeClassBonuses();
+    refreshAllSpellEffects();
   }
   recalc();
 }
