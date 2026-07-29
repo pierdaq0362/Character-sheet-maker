@@ -22,11 +22,14 @@
     --shadow: rgba(43,36,25,0.25);
   }
 
-  *{box-sizing:border-box;}
+  *{box-sizing:border-box; min-width:0;}
+
+  html{overflow-x:hidden;}
 
   body{
     margin:0;
     padding:0;
+    overflow-x:hidden;
     background:
       radial-gradient(ellipse at top left, rgba(255,255,255,0.15), transparent 60%),
       radial-gradient(ellipse at bottom right, rgba(0,0,0,0.06), transparent 60%),
@@ -35,6 +38,8 @@
     font-family:'EB Garamond', serif;
     font-size:16px;
     line-height:1.35;
+    word-wrap:break-word;
+    overflow-wrap:break-word;
   }
 
   .display{font-family:'Cinzel', serif;}
@@ -251,16 +256,31 @@
     gap:12px;
     flex-wrap:wrap;
   }
-  .confirm-row .btn{background:var(--forest); font-size:13px; padding:10px 16px;}
+  .confirm-row .btn{background:var(--forest); font-size:13px; padding:10px 16px; width:100%;}
   .confirm-row .btn:hover{background:#2e3d31;}
-  .confirm-status{
-    font-size:12.5px;
-    color:var(--forest);
+
+  .toast{
+    position:fixed;
+    left:50%;
+    bottom:24px;
+    transform:translateX(-50%) translateY(20px);
+    max-width:min(92vw, 520px);
+    background:var(--ink);
+    color:var(--parchment);
+    border:1px solid var(--gold);
+    border-radius:6px;
+    padding:11px 18px;
+    font-size:13px;
     font-weight:600;
+    text-align:center;
+    box-shadow:0 6px 20px var(--shadow);
     opacity:0;
-    transition:opacity 0.3s ease;
+    pointer-events:none;
+    transition:opacity 0.3s ease, transform 0.3s ease;
+    z-index:200;
   }
-  .confirm-status.show{opacity:1;}
+  .toast.show{opacity:1; transform:translateX(-50%) translateY(0);}
+  .toast.warn{border-color:var(--burgundy); background:var(--burgundy-dark);}
   .new-since-banner{
     background:#fff7e6;
     border:1px solid var(--gold);
@@ -336,6 +356,19 @@
   }
   .prepared-warning.show{opacity:1;}
 
+  .action-card h2{background:var(--forest);}
+  table.action-table td{vertical-align:middle;}
+  .act-name{font-weight:600;}
+  .act-limited{width:auto; accent-color:var(--burgundy); cursor:pointer;}
+  .uses-tracker{display:flex; align-items:center; gap:3px; white-space:nowrap;}
+  .uses-tracker input[type=number]{
+    width:34px; text-align:center; border:1px solid var(--line); background:var(--parchment);
+    border-radius:3px; padding:3px 2px; font-family:'JetBrains Mono',monospace; font-size:12.5px;
+  }
+  .uses-tracker .uses-sep{color:var(--ink-soft); font-size:12px;}
+  .uses-reset{padding:2px 6px !important; font-size:11px !important;}
+  .act-recharge{font-size:12.5px;}
+
   /* layout grid */
   .grid{
     display:grid;
@@ -367,11 +400,18 @@
     padding:7px 14px;
     border-radius:4px 4px 0 0;
     border-bottom:2px solid var(--gold);
+    display:flex;
+    flex-wrap:wrap;
+    align-items:baseline;
+    gap:4px 10px;
   }
   .card h2 .sub{
-    float:right;
     color:var(--gold-light);
     font-weight:500;
+    text-transform:none;
+    letter-spacing:normal;
+    flex:1 1 auto;
+    min-width:0;
   }
 
   /* ability seals */
@@ -496,7 +536,8 @@
   .deathsaves label{font-family:'Cinzel',serif; font-size:10.5px; text-transform:uppercase; color:var(--ink-soft);}
   .deathsaves input{accent-color:var(--burgundy);}
 
-  table.rows-table{width:100%; border-collapse:collapse; font-size:13.5px;}
+  .table-scroll{width:100%; overflow-x:auto; -webkit-overflow-scrolling:touch;}
+  table.rows-table{width:100%; min-width:480px; border-collapse:collapse; font-size:13.5px;}
   table.rows-table th{
     font-family:'Cinzel',serif; font-size:9.5px; text-transform:uppercase; letter-spacing:0.04em;
     color:var(--ink-soft); text-align:left; padding:3px 4px; border-bottom:1px solid var(--gold);
@@ -649,7 +690,8 @@
       </div>
     </div>
     <p class="builder-hint">Sets ability score bonuses, hit dice, speed and spell slots, and opens the Choices panel below.
-      Ability score <em>rolls</em> stay yours to enter — everything else is a real dropdown you pick, then confirm.</p>
+      Ability score <em>rolls</em> stay yours to enter — everything else is a real dropdown you pick, then confirm.
+      Already confirmed? <a href="#" id="btnReopenChoices">Reopen the Choices panel</a> to tweak a pick without leveling up.</p>
     <input type="hidden" name="lastConfirmedLevel" value="0">
     <input type="hidden" name="lastBuildRace" value="">
     <input type="hidden" name="lastBuildClass" value="">
@@ -662,9 +704,10 @@
     <div id="choicesItems"></div>
     <div class="confirm-row">
       <button class="btn" id="btnConfirmChoices" type="button">✓ Confirm Choices &amp; Update Sheet</button>
-      <span class="confirm-status" id="confirmStatus"></span>
     </div>
   </div>
+
+  <div id="toast" class="toast"></div>
 
   <div class="grid">
 
@@ -699,7 +742,11 @@
       <div class="card">
         <h2>Combat</h2>
         <div class="combat-row">
-          <div class="stat-box"><label>Armor Class</label><input name="ac" class="mono"></div>
+          <div class="stat-box">
+            <label>Armor Class <button type="button" id="btnAcReset" title="Reset to auto (10+Dex)" style="border:none;background:none;color:var(--ink-soft);cursor:pointer;font-size:10px;padding:0;">↺</button></label>
+            <input name="ac" class="mono" placeholder="10+Dex">
+            <input type="hidden" name="acManual" value="0">
+          </div>
           <div class="stat-box"><label>Initiative</label><span class="computed" id="initiative">+0</span></div>
           <div class="stat-box"><label>Speed</label><input name="speed" class="mono" placeholder="30 ft"></div>
           <div class="stat-box"><label>Hit Dice</label><input name="hitDice" class="mono" placeholder="5d10"></div>
@@ -721,11 +768,29 @@
 
       <div class="card">
         <h2>Attacks &amp; Cantrips</h2>
-        <table class="rows-table" id="attacksTable">
+        <div class="table-scroll"><table class="rows-table" id="attacksTable">
           <thead><tr><th style="width:38%">Name</th><th style="width:18%">Bonus</th><th>Damage / Type</th><th style="width:24px"></th></tr></thead>
           <tbody></tbody>
-        </table>
+        </table></div>
         <div class="row-actions"><button class="btn small secondary" id="addAttack">+ Add Row</button></div>
+      </div>
+
+      <div class="card action-card">
+        <h2>Actions <span class="sub">what you can do on your turn</span></h2>
+        <div class="table-scroll"><table class="rows-table action-table" id="actionsTable">
+          <thead><tr><th>Action</th><th style="width:15%; text-align:center;">Limited?</th><th style="width:16%">Uses</th><th style="width:22%">Recharges</th><th style="width:24px"></th></tr></thead>
+          <tbody></tbody>
+        </table></div>
+        <div class="row-actions"><button class="btn small secondary" id="addAction">+ Add Action</button></div>
+      </div>
+
+      <div class="card action-card">
+        <h2>Bonus Actions</h2>
+        <div class="table-scroll"><table class="rows-table action-table" id="bonusActionsTable">
+          <thead><tr><th>Bonus Action</th><th style="width:15%; text-align:center;">Limited?</th><th style="width:16%">Uses</th><th style="width:22%">Recharges</th><th style="width:24px"></th></tr></thead>
+          <tbody></tbody>
+        </table></div>
+        <div class="row-actions"><button class="btn small secondary" id="addBonusAction">+ Add Bonus Action</button></div>
       </div>
 
       <div class="card">
@@ -776,19 +841,19 @@
             <div class="computed mono" id="spellDcAtk" style="padding:6px 0; font-weight:700; color:var(--burgundy);">— / —</div>
           </div>
         </div>
-        <table class="rows-table" id="slotsTable">
+        <div class="table-scroll"><table class="rows-table" id="slotsTable">
           <thead><tr><th style="width:20%">Level</th><th style="width:40%">Slots Total</th><th>Expended</th></tr></thead>
           <tbody></tbody>
-        </table>
+        </table></div>
         <div class="row-actions" style="margin-bottom:10px;"></div>
         <div class="prepared-counter-row">
           <span id="preparedCounter" class="prepared-counter"></span>
           <span id="preparedWarning" class="prepared-warning"></span>
         </div>
-        <table class="rows-table" id="spellsTable">
+        <div class="table-scroll"><table class="rows-table" id="spellsTable">
           <thead><tr><th style="width:10%">Lvl</th><th style="width:24%">Spell</th><th style="width:10%">Prep?</th><th style="width:32%">Effect / Damage</th><th>Notes</th><th style="width:24px"></th></tr></thead>
           <tbody></tbody>
-        </table>
+        </table></div>
         <div class="row-actions"><button class="btn small secondary" id="addSpell">+ Add Spell</button></div>
       </div>
     </div>
@@ -1011,7 +1076,11 @@ const SPELL_DESCRIPTIONS = {
   'Aura of Purity': "An aura that reduces poison/disease susceptibility and eases exhaustion, blinded, deafened, or paralyzed conditions for allies nearby.",
   'Banishing Smite': "Your next weapon hit deals extra force damage and can banish the target to another plane briefly.",
   'Mass Cure Wounds': "Heal a burst of up to six creatures in a 30-ft sphere at once.",
-  'Polymorph': "Transform a creature into a different beast form, changing its statistics until the spell ends."
+  'Polymorph': "Transform a creature into a different beast form, changing its statistics until the spell ends.",
+
+  // --- Not on the standard Artificer list (Warlock/Wizard) — supported here for multiclass/feat/DM-approved use ---
+  'Eldritch Blast': "A beam of crackling energy per target in range; you get more beams at higher character levels. Not on the standard Artificer list — Warlock cantrip.",
+  'Find Familiar': "Ritual-cast a Tiny spirit in an animal form to scout, deliver touch spells, and keep you company. Not on the standard Artificer list — Wizard spell."
 };
 
 const SPELL_LEVELS = {
@@ -1020,7 +1089,8 @@ const SPELL_LEVELS = {
   'Hypnotic Pattern':3,'Lightning Bolt':3,'Fire Shield':4,'Greater Invisibility':4,'Passwall':5,'Wall of Force':5,
   'Shield':1,'Thunderwave':1,'Scorching Ray':2,'Shatter':2,'Fireball':3,'Wind Wall':3,'Ice Storm':4,'Wall of Fire':4,
   'Cone of Cold':5,'Heroism':1,'Branding Smite':2,'Warding Bond':2,'Aura of Vitality':3,'Conjure Barrage':3,
-  'Aura of Purity':4,'Banishing Smite':5,'Mass Cure Wounds':5,'Druidcraft':0,'Detect Poison and Disease':1,'Polymorph':4
+  'Aura of Purity':4,'Banishing Smite':5,'Mass Cure Wounds':5,'Druidcraft':0,'Detect Poison and Disease':1,'Polymorph':4,
+  'Eldritch Blast':0,'Find Familiar':1
 };
 
 function spellLevelOf(name){
@@ -1083,7 +1153,8 @@ const SPELL_DAMAGE = {
   'Cloudkill': {dice:'5d8', type:'poison', save:'Con'},
   'Conjure Barrage': {dice:'3d8', type:'weapon-based', save:'Dex'},
   'Banishing Smite': {dice:'5d10', type:'force', note:'on a weapon hit'},
-  'Branding Smite': {dice:'2d6', type:'radiant', note:'on a weapon hit'}
+  'Branding Smite': {dice:'2d6', type:'radiant', note:'on a weapon hit'},
+  'Eldritch Blast': {die:'d10', type:'force', attack:true, cantripScales:'beams'}
 };
 
 function cantripDieCount(level){
@@ -1096,6 +1167,12 @@ function cantripDieCount(level){
 function spellEffectText(name, level){
   const d = SPELL_DAMAGE[name];
   if(d){
+    if(d.cantripScales==='beams'){
+      const count = cantripDieCount(level||1);
+      return count>1
+        ? `${count} beams, 1${d.die} ${d.type} each (spell attack, beams can target separately)`
+        : `1${d.die} ${d.type} (spell attack)`;
+    }
     if(d.cantripScales){
       const count = cantripDieCount(level||1);
       return `${count}${d.die} ${d.type} ${d.attack ? '(spell attack)' : `(${d.save} save)`}`;
@@ -1114,6 +1191,9 @@ const SUBCLASSES = {
       {lvl:5, text:"Alchemical Savant: Add your Int modifier (min +1) to one healing roll or one acid/fire/necrotic/poison damage roll when you cast through your alchemist's supplies."},
       {lvl:9, text:"Restorative Reagents: Your elixirs also grant 2d6 + Int temporary HP; cast Lesser Restoration free a number of times equal to your Int modifier per long rest."},
       {lvl:15, text:"Chemical Mastery: Resistance to acid and poison, immunity to poisoned; cast Greater Restoration or Heal free once per long rest."}
+    ],
+    actions: [
+      {name:"Administer Experimental Elixir", minLevel:3, limited:true, max:2, recharge:'long'}
     ]
   },
   'Armorer': {
@@ -1125,6 +1205,9 @@ const SUBCLASSES = {
       {lvl:5, text:"Extra Attack: Attack twice, rather than once, when you take the Attack action."},
       {lvl:9, text:"Armor Modifications: Infuse your armor's chest, boots, helmet, and weapon separately, plus 2 extra infused items overall."},
       {lvl:15, text:"Perfected Armor: Guardian gains a forced-pull reaction against nearby foes; Infiltrator's Lightning Launcher leaves targets glimmering and exposed to your next attack."}
+    ],
+    bonusActions: [
+      {name:"Defensive Field (Guardian model only)", minLevel:3, limited:true, max:1, recharge:'long'}
     ]
   },
   'Artillerist': {
@@ -1135,6 +1218,13 @@ const SUBCLASSES = {
       {lvl:5, text:"Arcane Firearm: Turn a wand, staff, or rod into a focus that adds a d8 to one damage roll whenever you cast an artificer spell through it."},
       {lvl:9, text:"Explosive Cannon: Your cannon's damage rolls +1d8; you can detonate it for 3d8 force damage in a 20-ft burst."},
       {lvl:15, text:"Fortified Position: Half cover for you and allies within 10 ft of your cannon; you can maintain two cannons at once."}
+    ],
+    actions: [
+      {name:"Create Eldritch Cannon (or spend a spell slot to redo it)", minLevel:3, limited:true, max:1, recharge:'long'},
+      {name:"Detonate Eldritch Cannon", minLevel:9, limited:true, max:1, recharge:'long'}
+    ],
+    bonusActions: [
+      {name:"Command Eldritch Cannon", minLevel:3, limited:false}
     ]
   },
   'Battle Smith': {
@@ -1146,6 +1236,9 @@ const SUBCLASSES = {
       {lvl:5, text:"Extra Attack: Attack twice, rather than once, when you take the Attack action."},
       {lvl:9, text:"Arcane Jolt: On a hit (yours or your defender's), deal 2d6 extra force damage or heal 2d6 HP — Int-modifier times per long rest."},
       {lvl:15, text:"Improved Defender: Arcane Jolt increases to 4d6; your defender gains +2 AC and punishes attackers it deflects."}
+    ],
+    bonusActions: [
+      {name:"Command Steel Defender", minLevel:3, limited:false}
     ]
   }
 };
@@ -1290,6 +1383,102 @@ document.getElementById('addAttack').onclick = ()=> attacksBody.appendChild(make
 document.getElementById('addSpell').onclick = ()=> spellsBody.appendChild(makeSpellRow());
 for(let i=0;i<3;i++) attacksBody.appendChild(makeAttackRow());
 
+// ---------- Actions / Bonus Actions tables ----------
+const RECHARGE_LABELS = {atwill:'At-will', short:'Short Rest', long:'Long Rest'};
+function makeActionRow(vals={}){
+  const tr = document.createElement('tr');
+  if(vals.universalAction) tr.dataset.universalAction = vals.universalAction;
+  if(vals.managedSubclassAction) tr.dataset.managedSubclassAction = vals.managedSubclassAction;
+  if(vals.managedSubclassBonusAction) tr.dataset.managedSubclassBonusAction = vals.managedSubclassBonusAction;
+  const limited = !!vals.limited;
+  const max = vals.max!==undefined && vals.max!==null ? vals.max : '';
+  const current = vals.current!==undefined && vals.current!==null ? vals.current : max;
+  const recharge = vals.recharge || 'long';
+  tr.innerHTML = `
+    <td><input type="text" class="act-name" value="${(vals.name||'').replace(/"/g,'&quot;')}" placeholder="e.g. Second Wind"></td>
+    <td style="text-align:center"><input type="checkbox" class="act-limited" ${limited?'checked':''}></td>
+    <td>
+      <span class="uses-tracker" style="${limited?'':'display:none'}">
+        <input type="number" class="act-uses-current mono" min="0" value="${current}">
+        <span class="uses-sep">/</span>
+        <input type="number" class="act-uses-max mono" min="0" value="${max}">
+        <button type="button" class="btn small secondary uses-reset" title="Reset to max">↺</button>
+      </span>
+    </td>
+    <td>
+      <select class="act-recharge" style="${limited?'':'display:none'}">
+        <option value="long" ${recharge==='long'?'selected':''}>Long Rest</option>
+        <option value="short" ${recharge==='short'?'selected':''}>Short Rest</option>
+        <option value="atwill" ${recharge==='atwill'?'selected':''}>At-will</option>
+      </select>
+    </td>
+    <td><button class="btn small danger" type="button" onclick="this.closest('tr').remove()">✕</button></td>`;
+
+  const limitedCb = tr.querySelector('.act-limited');
+  const usesTracker = tr.querySelector('.uses-tracker');
+  const rechargeSel = tr.querySelector('.act-recharge');
+  limitedCb.addEventListener('change', ()=>{
+    usesTracker.style.display = limitedCb.checked ? '' : 'none';
+    rechargeSel.style.display = limitedCb.checked ? '' : 'none';
+  });
+  tr.querySelector('.uses-reset').addEventListener('click', ()=>{
+    const maxEl = tr.querySelector('.act-uses-max');
+    tr.querySelector('.act-uses-current').value = maxEl.value || '0';
+  });
+  return tr;
+}
+
+const UNIVERSAL_ACTIONS = ['Attack','Cast a Spell','Dash','Disengage','Dodge','Help','Hide','Ready','Search','Use an Object'];
+
+const actionsBody = document.querySelector('#actionsTable tbody');
+const bonusActionsBody = document.querySelector('#bonusActionsTable tbody');
+document.getElementById('addAction').onclick = ()=> actionsBody.appendChild(makeActionRow());
+document.getElementById('addBonusAction').onclick = ()=> bonusActionsBody.appendChild(makeActionRow());
+UNIVERSAL_ACTIONS.forEach(name=>{
+  const tr = makeActionRow({name, limited:false});
+  tr.dataset.universalAction = 'true';
+  actionsBody.appendChild(tr);
+});
+
+let managedSubclassActionNames = new Set();
+let managedSubclassBonusActionNames = new Set();
+
+function syncSubclassActions(){
+  const newActionSet = new Set();
+  const newBonusSet = new Set();
+  if(ACTIVE.cls && ACTIVE.cls.subclasses){
+    const subKey = document.querySelector('[name="choice_subclass"]');
+    const sub = (subKey && subKey.value) ? ACTIVE.cls.subclasses[subKey.value] : null;
+    if(sub){
+      (sub.actions||[]).forEach(a=>{ if(a.minLevel<=ACTIVE.level) newActionSet.add(a.name); });
+      (sub.bonusActions||[]).forEach(a=>{ if(a.minLevel<=ACTIVE.level) newBonusSet.add(a.name); });
+    }
+  }
+  function syncTable(body, oldSet, newSet, dataAttr, sourceArrFn){
+    oldSet.forEach(name=>{
+      if(!newSet.has(name)){
+        const row = [...body.querySelectorAll('tr')].find(tr=>tr.dataset[dataAttr]===name);
+        if(row) row.remove();
+      }
+    });
+    newSet.forEach(name=>{
+      const exists = [...body.querySelectorAll('tr')].some(tr=>tr.dataset[dataAttr]===name);
+      if(!exists){
+        const def = sourceArrFn().find(a=>a.name===name);
+        const tr = makeActionRow({name, limited:def?def.limited:false, max:def?def.max:null, current:def?def.max:null, recharge:def?def.recharge:'long'});
+        tr.dataset[dataAttr] = name;
+        body.appendChild(tr);
+      }
+    });
+  }
+  const subKey2 = document.querySelector('[name="choice_subclass"]')?.value;
+  const sub2 = (ACTIVE.cls && ACTIVE.cls.subclasses && subKey2) ? ACTIVE.cls.subclasses[subKey2] : null;
+  syncTable(actionsBody, managedSubclassActionNames, newActionSet, 'managedSubclassAction', ()=> (sub2 && sub2.actions) || []);
+  syncTable(bonusActionsBody, managedSubclassBonusActionNames, newBonusSet, 'managedSubclassBonusAction', ()=> (sub2 && sub2.bonusActions) || []);
+  managedSubclassActionNames = newActionSet;
+  managedSubclassBonusActionNames = newBonusSet;
+}
+
 // spell slots table (fixed levels 1-9)
 const slotsBody = document.querySelector('#slotsTable tbody');
 for(let lvl=1; lvl<=9; lvl++){
@@ -1395,6 +1584,12 @@ function recalc(){
   document.getElementById('passivePerception').textContent = 10 + perceptionMod;
 
   document.getElementById('initiative').textContent = fmt(scores.dex);
+
+  const acEl = document.querySelector('[name="ac"]');
+  const acManualEl = document.querySelector('[name="acManual"]');
+  if(acEl && acManualEl && acManualEl.value !== '1'){
+    acEl.value = 10 + scores.dex;
+  }
 
   const spellAbility = document.querySelector('[name="spellAbility"]').value;
   const dcEl = document.getElementById('spellDcAtk');
@@ -1966,6 +2161,7 @@ function commitChoices(){
   syncManagedSkills();
   recomputeClassBonuses();
   syncSubclassBonusSpells();
+  syncSubclassActions();
   syncCantripChoices();
   syncGuildSpellChoices();
   syncWeaponAttack();
@@ -1974,19 +2170,28 @@ function commitChoices(){
   refreshAllSpellEffects();
   recalc();
 
-  const status = document.getElementById('confirmStatus');
-  if(status){
-    const allDefault = ABILITIES.every(a=>{
-      const el = document.querySelector(`[name="score_${a.key}"]`);
-      return el && (el.value === '10' || el.value === '');
-    });
-    status.textContent = allDefault
+  const allDefault = ABILITIES.every(a=>{
+    const el = document.querySelector(`[name="score_${a.key}"]`);
+    return el && (el.value === '10' || el.value === '');
+  });
+  showToast(
+    allDefault
       ? '✓ Sheet updated — reminder: your ability scores are still all 10, don\'t forget to enter your rolled scores!'
-      : '✓ Sheet updated';
-    status.classList.add('show');
-    clearTimeout(status._hideTimer);
-    status._hideTimer = setTimeout(()=>status.classList.remove('show'), allDefault ? 6000 : 2500);
-  }
+      : '✓ Sheet updated',
+    allDefault ? 'warn' : ''
+  );
+
+  const choicesCard = document.getElementById('choicesCard');
+  if(choicesCard) choicesCard.style.display = 'none';
+}
+
+function showToast(message, variant){
+  const toast = document.getElementById('toast');
+  if(!toast) return;
+  toast.textContent = message;
+  toast.className = 'toast show' + (variant ? ' '+variant : '');
+  clearTimeout(toast._hideTimer);
+  toast._hideTimer = setTimeout(()=>{ toast.classList.remove('show'); }, variant==='warn' ? 6000 : 3000);
 }
 
 function renderChoicesPanel(race, cls, bg, level){
@@ -2291,7 +2496,21 @@ function gatherData(){
       managedGuildSpell: tr.dataset.managedGuildSpell || null
     };
   });
-  return {fields, attacks, spells, _type:'dnd5e-character', _version:1};
+  function gatherActionRows(body){
+    return [...body.querySelectorAll('tr')].map(tr=>({
+      name: tr.querySelector('.act-name').value,
+      limited: tr.querySelector('.act-limited').checked,
+      current: tr.querySelector('.act-uses-current').value,
+      max: tr.querySelector('.act-uses-max').value,
+      recharge: tr.querySelector('.act-recharge').value,
+      universalAction: tr.dataset.universalAction || null,
+      managedSubclassAction: tr.dataset.managedSubclassAction || null,
+      managedSubclassBonusAction: tr.dataset.managedSubclassBonusAction || null
+    }));
+  }
+  const actions = gatherActionRows(actionsBody);
+  const bonusActions = gatherActionRows(bonusActionsBody);
+  return {fields, attacks, spells, actions, bonusActions, _type:'dnd5e-character', _version:1};
 }
 
 function escapeAttr(s){
@@ -2334,12 +2553,27 @@ function loadData(data){
   spellsBody.innerHTML='';
   (data.spells||[]).forEach(v=>spellsBody.appendChild(makeSpellRow(v)));
 
+  actionsBody.innerHTML='';
+  if(data.actions && data.actions.length){
+    data.actions.forEach(v=>actionsBody.appendChild(makeActionRow(v)));
+  } else {
+    UNIVERSAL_ACTIONS.forEach(name=>{
+      const tr = makeActionRow({name, limited:false});
+      tr.dataset.universalAction = 'true';
+      actionsBody.appendChild(tr);
+    });
+  }
+  bonusActionsBody.innerHTML='';
+  (data.bonusActions||[]).forEach(v=>bonusActionsBody.appendChild(makeActionRow(v)));
+
   if(ACTIVE.race || ACTIVE.cls || ACTIVE.bg){
     managedSkillKeys = new Set();
     managedSubclassSpellNames = new Set((data.spells||[]).filter(s=>s.subclassBonus).map(s=>s.subclassBonus));
     managedCantripSpellNames = new Set((data.spells||[]).filter(s=>s.managedCantrip).map(s=>s.managedCantrip));
     managedGuildSpellNames = new Set((data.spells||[]).filter(s=>s.managedGuildSpell).map(s=>s.managedGuildSpell));
     managedCantripAttackNames = new Set((data.attacks||[]).filter(a=>a.managedCantripAttack).map(a=>a.managedCantripAttack));
+    managedSubclassActionNames = new Set((data.actions||[]).filter(a=>a.managedSubclassAction).map(a=>a.managedSubclassAction));
+    managedSubclassBonusActionNames = new Set((data.bonusActions||[]).filter(a=>a.managedSubclassBonusAction).map(a=>a.managedSubclassBonusAction));
     updateAsiVisibility();
     updateEquipModeVisibility();
     markRequiredFields();
@@ -2411,6 +2645,22 @@ document.getElementById('btnPdf').onclick = ()=>{
   window.print();
 };
 window.addEventListener('afterprint', cleanupAfterPrint);
+
+document.querySelector('[name="ac"]').addEventListener('input', ()=>{
+  document.querySelector('[name="acManual"]').value = '1';
+});
+document.getElementById('btnAcReset').addEventListener('click', ()=>{
+  document.querySelector('[name="acManual"]').value = '0';
+  recalc();
+});
+document.getElementById('btnReopenChoices').addEventListener('click', (e)=>{
+  e.preventDefault();
+  const card = document.getElementById('choicesCard');
+  if(card && (ACTIVE.cls || ACTIVE.race || ACTIVE.bg)){
+    card.style.display = '';
+    card.scrollIntoView({behavior:'smooth', block:'start'});
+  }
+});
 
 recalc();
 </script>
