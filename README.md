@@ -2,7 +2,7 @@
 
 A no-install character sheet for D&D 5th Edition. Auto-calculates modifiers,
 saving throws, skills, passive perception, and spellcasting DC/attack bonus as
-you fill it in.
+you fill it in..
 
 ## File structure
 ```
