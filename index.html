@@ -191,6 +191,7 @@
 
   #choicesCard{border-color:var(--gold);}
   #choicesCard h2{background:var(--forest);}
+  .builder-collapsed-bar{padding:10px 16px; display:flex; justify-content:center;}
   .choice-group{
     margin-bottom:14px;
     padding-bottom:12px;
@@ -697,6 +698,10 @@
     <input type="hidden" name="lastBuildClass" value="">
     <input type="hidden" name="lastBuildBackground" value="">
     <input type="hidden" name="classGoldApplied" value="0">
+  </div>
+
+  <div class="card builder-collapsed-bar" id="builderCollapsedBar" style="display:none;">
+    <button class="btn small" id="btnShowBuilder" type="button">⚔ Level Up / Edit Character</button>
   </div>
 
   <div class="card" id="choicesCard" style="display:none;">
