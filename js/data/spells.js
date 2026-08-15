@@ -132,6 +132,7 @@ const SPELL_DESCRIPTIONS = {
 
   // --- Not on the standard Artificer list (Warlock/Wizard) — supported here for multiclass/feat/DM-approved use ---
   'Eldritch Blast': "A beam of crackling energy per target in range; you get more beams at higher character levels. Not on the standard Artificer list — Warlock cantrip.",
+  "Hunter's Mark": "Mark a creature you can see; your weapon attacks against it deal extra damage, and you have advantage on tracking it. Concentration, 1 hour. Not on the standard Artificer list — Ranger spell.",
   'Find Familiar': "Ritual-cast a Tiny spirit in an animal form to scout, deliver touch spells, and keep you company. Not on the standard Artificer list — Wizard spell."
 };
 
@@ -142,7 +143,7 @@ const SPELL_LEVELS = {
   'Shield':1,'Thunderwave':1,'Scorching Ray':2,'Shatter':2,'Fireball':3,'Wind Wall':3,'Ice Storm':4,'Wall of Fire':4,
   'Cone of Cold':5,'Heroism':1,'Branding Smite':2,'Warding Bond':2,'Aura of Vitality':3,'Conjure Barrage':3,
   'Aura of Purity':4,'Banishing Smite':5,'Mass Cure Wounds':5,'Druidcraft':0,'Detect Poison and Disease':1,'Polymorph':4,
-  'Eldritch Blast':0,'Find Familiar':1
+  'Eldritch Blast':0,'Find Familiar':1,"Hunter's Mark":1
 };
 
 const SPELL_DAMAGE = {
@@ -169,5 +170,6 @@ const SPELL_DAMAGE = {
   'Conjure Barrage': {dice:'3d8', type:'weapon-based', save:'Dex'},
   'Banishing Smite': {dice:'5d10', type:'force', note:'on a weapon hit'},
   'Branding Smite': {dice:'2d6', type:'radiant', note:'on a weapon hit'},
-  'Eldritch Blast': {die:'d10', type:'force', attack:true, cantripScales:'beams'}
+  'Eldritch Blast': {die:'d10', type:'force', attack:true, cantripScales:'beams'},
+  "Hunter's Mark": {dice:'1d6', type:'(matches your weapon)', note:'Extra damage added on a weapon hit against the marked target — roll alongside your normal attack.'}
 };
