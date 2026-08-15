@@ -969,6 +969,11 @@ function commitChoices(){
 
   const choicesCard = document.getElementById('choicesCard');
   if(choicesCard) choicesCard.style.display = 'none';
+
+  const builderCard = document.querySelector('.builder-card');
+  const builderBar = document.getElementById('builderCollapsedBar');
+  if(builderCard) builderCard.style.display = 'none';
+  if(builderBar) builderBar.style.display = '';
 }
 
 function showToast(message, variant){
@@ -1446,6 +1451,13 @@ document.getElementById('btnReopenChoices').addEventListener('click', (e)=>{
     card.style.display = '';
     card.scrollIntoView({behavior:'smooth', block:'start'});
   }
+});
+document.getElementById('btnShowBuilder').addEventListener('click', ()=>{
+  const builderCard = document.querySelector('.builder-card');
+  const builderBar = document.getElementById('builderCollapsedBar');
+  if(builderCard) builderCard.style.display = '';
+  if(builderBar) builderBar.style.display = 'none';
+  if(builderCard) builderCard.scrollIntoView({behavior:'smooth', block:'start'});
 });
 
 recalc();
