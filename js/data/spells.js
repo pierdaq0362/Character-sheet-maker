@@ -173,3 +173,377 @@ const SPELL_DAMAGE = {
   'Eldritch Blast': {die:'d10', type:'force', attack:true, cantripScales:'beams'},
   "Hunter's Mark": {dice:'1d6', type:'(matches your weapon)', note:'Extra damage added on a weapon hit against the marked target — roll alongside your normal attack.'}
 };
+
+// ============================================================================
+// Spellbook sidebar + Roll/Details modal
+// Self-contained here so spell UI changes don't require touching js/app.js —
+// it only reads globals app.js already exposes (ACTIVE, CUSTOM_SPELL,
+// showToast, cantripDieCount) and DOM fields app.js already creates
+// (slotTotal_N / slotExpended_N, .spell-level / .spell-name-select /
+// .spell-prep on each spells-table row) at call time, after the page loads.
+// ============================================================================
+
+(function(){
+
+  // ---------------------------------------------------------------------
+  // Dice rolling
+  // ---------------------------------------------------------------------
+  function _d(nSides){ return 1 + Math.floor(Math.random() * nSides); }
+
+  // Expands "3×(1d4+1)" style multiplier notation into "1d4+1+1d4+1+1d4+1"
+  function _expandMultiplier(expr){
+    return expr.replace(/(\d+)\s*[×x]\s*\(([^)]+)\)/gi, (m, n, inner) => {
+      const count = parseInt(n, 10);
+      return Array(count).fill(inner).join('+');
+    });
+  }
+
+  // Rolls a dice expression like "2d8+4d6", "5d10", or "3×(1d4+1)".
+  function rollDiceExpression(expr){
+    if(!expr) return null;
+    const expanded = _expandMultiplier(expr);
+    const terms = expanded.match(/[+-]?[^+-]+/g) || [];
+    let total = 0;
+    const parts = [];
+    terms.forEach(raw=>{
+      const trimmed = raw.trim();
+      const sign = trimmed.startsWith('-') ? -1 : 1;
+      const term = trimmed.replace(/^[+-]/, '').trim();
+      const diceMatch = term.match(/^(\d+)d(\d+)$/i);
+      if(diceMatch){
+        const n = parseInt(diceMatch[1], 10);
+        const s = parseInt(diceMatch[2], 10);
+        const rolls = [];
+        for(let i=0;i<n;i++) rolls.push(_d(s));
+        const sum = rolls.reduce((a,b)=>a+b, 0);
+        total += sign * sum;
+        parts.push(`${sign<0?'-':''}${n}d${s} [${rolls.join('+')}]`);
+      } else if(/^\d+$/.test(term)){
+        const val = parseInt(term, 10);
+        total += sign * val;
+        parts.push(`${sign<0?'-':'+'}${val}`);
+      } else if(term){
+        parts.push(term);
+      }
+    });
+    return { total, breakdown: parts.join(' ') };
+  }
+
+  // ---------------------------------------------------------------------
+  // Reading current character state
+  // ---------------------------------------------------------------------
+  function _charLevel(){
+    try { if(typeof ACTIVE !== 'undefined' && ACTIVE && ACTIVE.level) return ACTIVE.level; } catch(e){}
+    return 1;
+  }
+  function _cantripCount(level){
+    try { if(typeof cantripDieCount === 'function') return cantripDieCount(level); } catch(e){}
+    if(level>=17) return 4;
+    if(level>=11) return 3;
+    if(level>=5) return 2;
+    return 1;
+  }
+  // Parses the sheet's computed "DC 15 / +7 · prepare 5" display, if present.
+  function _spellDcAtk(){
+    const el = document.getElementById('spellDcAtk');
+    if(!el) return { dc:null, atk:null };
+    const m = el.textContent.match(/DC\s*(-?\d+)\s*\/\s*([+-]?\d+)/);
+    if(!m) return { dc:null, atk:null };
+    return { dc: parseInt(m[1],10), atk: parseInt(m[2],10) };
+  }
+
+  // ---------------------------------------------------------------------
+  // Roll-relevant info for a spell, from SPELL_DAMAGE
+  // ---------------------------------------------------------------------
+  function getSpellRollInfo(name, level){
+    const d = (typeof SPELL_DAMAGE !== 'undefined') ? SPELL_DAMAGE[name] : null;
+    if(!d) return null;
+    let expr;
+    if(d.cantripScales === 'beams'){
+      const count = _cantripCount(level || _charLevel());
+      return { beams: count, die: d.die, type: d.type, attack: true, note: d.note };
+    }
+    if(d.cantripScales){
+      const count = _cantripCount(level || _charLevel());
+      const sides = (d.die || '').replace(/^d/i, '');
+      expr = `${count}d${sides}`;
+    } else {
+      expr = d.dice || (d.die ? `1${d.die}` : null);
+    }
+    return { expr, type: d.type, attack: d.attack||false, save: d.save||null, note: d.note||null };
+  }
+
+  // Quick badge for the sidebar: "🎯+8" / "🛡️DC16" / "" 
+  function getSpellBadge(name){
+    const d = (typeof SPELL_DAMAGE !== 'undefined') ? SPELL_DAMAGE[name] : null;
+    if(!d) return '';
+    const { dc, atk } = _spellDcAtk();
+    if(d.attack || d.cantripScales === 'beams') return atk!==null ? `🎯 ${atk>=0?'+':''}${atk}` : '🎯 —';
+    if(d.save) return dc!==null ? `🛡️ DC ${dc}` : '🛡️ DC —';
+    return '🎲';
+  }
+
+  // ---------------------------------------------------------------------
+  // Modal content builders
+  // ---------------------------------------------------------------------
+  function buildRollModalContent(name, level){
+    const info = getSpellRollInfo(name, level);
+    if(!info){
+      return `<div class="desc-text">This spell doesn't have an automatic dice roll set up — check <strong>Details</strong> for what it does, or roll manually per its description.</div>`;
+    }
+    let html = '';
+    const { dc, atk } = _spellDcAtk();
+
+    if(info.beams){
+      for(let i=1;i<=info.beams;i++){
+        const atkRoll = _d(20);
+        const atkTotal = (atk!==null) ? atkRoll + atk : atkRoll;
+        const dmgRoll = _d(parseInt((info.die||'d10').replace(/^d/i,''),10));
+        html += `<div class="roll-line">Beam ${i} — Attack: ${atk!==null?`${atkTotal} (d20: ${atkRoll} + ${atk})`:`${atkRoll} (raw d20 — set your Spellcasting Ability to compute the bonus)`}<br>Damage: <span class="roll-total">${dmgRoll}</span> ${info.type||''}</div>`;
+      }
+      return html + `<div class="roll-note">Each beam can target a different creature.</div>`;
+    }
+
+    if(info.attack){
+      const atkRoll = _d(20);
+      const atkTotal = (atk!==null) ? atkRoll + atk : atkRoll;
+      html += `<div class="roll-line">Attack roll: <span class="roll-total">${atkTotal}</span> ${atk!==null?`(d20: ${atkRoll} + ${atk})`:'(raw d20 — set your Spellcasting Ability to compute the bonus)'}<br><span class="roll-note" style="margin-top:0;">On a hit vs. the target's AC, roll damage below.</span></div>`;
+    } else if(info.save){
+      html += `<div class="roll-line">Target makes a <strong>${info.save} saving throw</strong>${dc!==null?` (DC ${dc})`:''}.<br><span class="roll-note" style="margin-top:0;">Fail: takes full damage below. Success: takes half (round down), unless the spell says otherwise.</span></div>`;
+    } else if(info.note){
+      html += `<div class="roll-line">${info.note}</div>`;
+    }
+
+    if(info.expr){
+      const result = rollDiceExpression(info.expr);
+      if(result){
+        html += `<div class="roll-line">Damage (${info.expr}${info.type?`, ${info.type}`:''}): <span class="roll-total">${result.total}</span><br><span class="roll-note" style="margin-top:0;">${result.breakdown}</span></div>`;
+      }
+    }
+    return html || `<div class="desc-text">No automatic roll for this spell — check Details.</div>`;
+  }
+
+  function buildDetailsModalContent(name, level){
+    const desc = (typeof SPELL_DESCRIPTIONS !== 'undefined') ? SPELL_DESCRIPTIONS[name] : '';
+    const effect = (typeof spellEffectText === 'function') ? spellEffectText(name, level || _charLevel()) : '';
+    let html = '';
+    html += `<div class="desc-text">${desc || 'No description on file for this spell yet — you can still use Roll if it has damage data.'}</div>`;
+    if(effect) html += `<div class="roll-line">${effect}</div>`;
+    return html;
+  }
+
+  // ---------------------------------------------------------------------
+  // Modal open/close
+  // ---------------------------------------------------------------------
+  function ensureModalWired(){
+    const overlay = document.getElementById('spellModalOverlay');
+    const closeBtn = document.getElementById('spellModalClose');
+    if(!overlay || overlay._wired) return;
+    overlay._wired = true;
+    closeBtn.addEventListener('click', closeSpellModal);
+    overlay.addEventListener('click', (e)=>{ if(e.target === overlay) closeSpellModal(); });
+    document.addEventListener('keydown', (e)=>{ if(e.key === 'Escape') closeSpellModal(); });
+  }
+  function openSpellModal(kicker, title, bodyHtml){
+    ensureModalWired();
+    const overlay = document.getElementById('spellModalOverlay');
+    document.getElementById('spellModalKicker').textContent = kicker;
+    document.getElementById('spellModalTitle').textContent = title;
+    document.getElementById('spellModalBody').innerHTML = bodyHtml;
+    overlay.style.display = 'flex';
+  }
+  function closeSpellModal(){
+    const overlay = document.getElementById('spellModalOverlay');
+    if(overlay) overlay.style.display = 'none';
+  }
+
+  // ---------------------------------------------------------------------
+  // Reading each underlying spells-table row (the existing editor table
+  // remains the single source of truth — the sidebar is just a nicer view
+  // onto the same rows, so nothing about save/load or choice-syncing changes)
+  // ---------------------------------------------------------------------
+  function _rowData(tr){
+    const nameSel = tr.querySelector('.spell-name-select');
+    const customInput = tr.querySelector('.spell-name-custom');
+    const levelSel = tr.querySelector('.spell-level');
+    const prepEl = tr.querySelector('.spell-prep');
+    const customVal = (typeof CUSTOM_SPELL !== 'undefined') ? CUSTOM_SPELL : '__custom__';
+    const name = nameSel && nameSel.value === customVal
+      ? (customInput ? customInput.value.trim() : '')
+      : (nameSel ? nameSel.value : '');
+    const level = levelSel ? parseInt(levelSel.value, 10) || 0 : 0;
+    const prepared = prepEl ? prepEl.checked : false;
+    return { name, level, prepared };
+  }
+  function getAllSpellRows(){
+    const body = document.querySelector('#spellsTable tbody');
+    if(!body) return [];
+    return [...body.querySelectorAll('tr')].map(_rowData).filter(r => r.name);
+  }
+
+  // ---------------------------------------------------------------------
+  // Slot tracking (reads/writes the sheet's existing slotTotal_N /
+  // slotExpended_N inputs — already created by app.js for levels 1-9)
+  // ---------------------------------------------------------------------
+  function _slotFields(level){
+    return {
+      total: document.querySelector(`[name="slotTotal_${level}"]`),
+      used: document.querySelector(`[name="slotExpended_${level}"]`)
+    };
+  }
+  function _slotCounts(level){
+    const { total, used } = _slotFields(level);
+    const t = total ? (parseInt(total.value, 10) || 0) : 0;
+    const u = used ? (parseInt(used.value, 10) || 0) : 0;
+    return { total: t, used: u };
+  }
+  function consumeSlot(level){
+    if(!level) return; // cantrips never consume a slot
+    const { used } = _slotFields(level);
+    if(!used) return;
+    const current = parseInt(used.value, 10) || 0;
+    used.value = String(current + 1);
+    used.dispatchEvent(new Event('change', { bubbles: true }));
+    renderSpellbookSlots();
+    if(typeof showToast === 'function'){
+      const { total } = _slotCounts(level);
+      showToast(`Level ${level} slot used (${current+1}/${total || '?'})`);
+    }
+  }
+  function freeSlot(level){
+    const { used } = _slotFields(level);
+    if(!used) return;
+    const current = parseInt(used.value, 10) || 0;
+    used.value = String(Math.max(0, current - 1));
+    used.dispatchEvent(new Event('change', { bubbles: true }));
+    renderSpellbookSlots();
+  }
+
+  function renderSpellbookSlots(){
+    const container = document.getElementById('spellbookSlots');
+    if(!container) return;
+    const rows = getAllSpellRows();
+    const levelsInUse = new Set(rows.map(r => r.level).filter(l => l > 0));
+    // also show any level that has a Total set, even with no spells listed yet
+    for(let l=1;l<=9;l++){
+      const { total } = _slotCounts(l);
+      if(total > 0) levelsInUse.add(l);
+    }
+    const levels = [...levelsInUse].sort((a,b)=>a-b);
+    if(!levels.length){
+      container.innerHTML = `<span style="font-size:11.5px; color:var(--ink-soft);">No leveled slots set yet — fill in Slots Total on the sheet.</span>`;
+      return;
+    }
+    container.innerHTML = levels.map(l=>{
+      const { total, used } = _slotCounts(l);
+      const remaining = Math.max(0, total - used);
+      return `<span class="spellbook-slot-chip" data-level="${l}">
+        Lv${l}: <strong>${remaining}/${total}</strong>
+        <button type="button" class="sb-slot-free" title="Free a slot">−</button>
+        <button type="button" class="sb-slot-use" title="Use a slot">+</button>
+      </span>`;
+    }).join('');
+    container.querySelectorAll('.sb-slot-use').forEach(btn=>{
+      btn.addEventListener('click', ()=> consumeSlot(parseInt(btn.closest('.spellbook-slot-chip').dataset.level,10)));
+    });
+    container.querySelectorAll('.sb-slot-free').forEach(btn=>{
+      btn.addEventListener('click', ()=> freeSlot(parseInt(btn.closest('.spellbook-slot-chip').dataset.level,10)));
+    });
+  }
+
+  // ---------------------------------------------------------------------
+  // Spellbook list rendering
+  // ---------------------------------------------------------------------
+  function levelLabel(l){ return l === 0 ? 'Cantrips' : `Level ${l}`; }
+
+  function renderSpellbookList(){
+    const container = document.getElementById('spellbookList');
+    if(!container) return;
+    const rows = getAllSpellRows();
+    if(!rows.length){
+      container.innerHTML = `<div class="spellbook-empty">No spells added yet — add some in the Spellcasting section, then open the Spellbook to use them here.</div>`;
+      return;
+    }
+    const byLevel = {};
+    rows.forEach(r=>{ (byLevel[r.level] = byLevel[r.level] || []).push(r); });
+    const levels = Object.keys(byLevel).map(Number).sort((a,b)=>a-b);
+    container.innerHTML = levels.map(l=>{
+      const items = byLevel[l].slice().sort((a,b)=> a.name.localeCompare(b.name));
+      const itemsHtml = items.map(r=>{
+        const badge = getSpellBadge(r.name);
+        return `<div class="spellbook-item" data-name="${r.name.replace(/"/g,'&quot;')}" data-level="${r.level}">
+          <div class="sb-name"><span class="sb-title${r.prepared?' prepared':''}">${r.name}</span></div>
+          ${badge?`<span class="sb-badge">${badge}</span>`:''}
+          <button type="button" class="sb-roll" title="Roll">🎲</button>
+        </div>`;
+      }).join('');
+      return `<div class="spellbook-level-heading">${levelLabel(l)}</div>${itemsHtml}`;
+    }).join('');
+
+    container.querySelectorAll('.spellbook-item').forEach(item=>{
+      const name = item.dataset.name;
+      const level = parseInt(item.dataset.level, 10) || 0;
+      item.querySelector('.sb-name').addEventListener('click', ()=>{
+        openSpellModal('Details', name, buildDetailsModalContent(name, level));
+      });
+      item.querySelector('.sb-roll').addEventListener('click', (e)=>{
+        e.stopPropagation();
+        openSpellModal('Roll', name, buildRollModalContent(name, level));
+        if(level > 0) consumeSlot(level);
+      });
+    });
+  }
+
+  function refreshSpellbook(){
+    renderSpellbookSlots();
+    renderSpellbookList();
+  }
+
+  // ---------------------------------------------------------------------
+  // Sidebar open/close + keeping it in sync with the underlying table
+  // ---------------------------------------------------------------------
+  function openSpellbook(){
+    refreshSpellbook();
+    document.getElementById('spellbookOverlay').style.display = 'flex';
+  }
+  function closeSpellbook(){
+    document.getElementById('spellbookOverlay').style.display = 'none';
+  }
+
+  function wireSpellbookChrome(){
+    const openBtn = document.getElementById('btnOpenSpellbook');
+    const closeBtn = document.getElementById('btnCloseSpellbook');
+    const overlay = document.getElementById('spellbookOverlay');
+    if(openBtn) openBtn.addEventListener('click', openSpellbook);
+    if(closeBtn) closeBtn.addEventListener('click', closeSpellbook);
+    if(overlay) overlay.addEventListener('click', (e)=>{ if(e.target === overlay) closeSpellbook(); });
+    document.addEventListener('keydown', (e)=>{ if(e.key === 'Escape') closeSpellbook(); });
+
+    // keep the sidebar in sync with edits made in the underlying table
+    // while it's open (name/level/prepared changes, rows added/removed)
+    const body = document.querySelector('#spellsTable tbody');
+    if(body){
+      body.addEventListener('change', ()=>{ if(overlay.style.display !== 'none') refreshSpellbook(); });
+      body.addEventListener('input', ()=>{ if(overlay.style.display !== 'none') refreshSpellbook(); });
+      const observer = new MutationObserver(()=>{ if(overlay.style.display !== 'none') refreshSpellbook(); });
+      observer.observe(body, { childList: true });
+    }
+    // and with slot total edits
+    for(let l=1;l<=9;l++){
+      const totalEl = document.querySelector(`[name="slotTotal_${l}"]`);
+      if(totalEl) totalEl.addEventListener('input', ()=>{ if(overlay.style.display !== 'none') renderSpellbookSlots(); });
+    }
+  }
+
+  function init(){
+    ensureModalWired();
+    wireSpellbookChrome();
+  }
+
+  if(document.readyState === 'loading'){
+    document.addEventListener('DOMContentLoaded', init);
+  } else {
+    init();
+  }
+
+})();
