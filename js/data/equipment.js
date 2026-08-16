@@ -27,3 +27,213 @@ const MARTIAL_WEAPONS = {
   'Greatsword': {dmg:'2d6', type:'slashing'},
   'Halberd': {dmg:'1d10', type:'slashing'}
 };
+
+// ============================================================================
+// Weapons panel — sidebar view onto the existing #attacksTable rows (that
+// table stays the single source of truth / editor, same pattern as the
+// Spellbook onto #spellsTable). Self-contained: doesn't touch js/app.js.
+// Also wires the Actions-section collapse/reveal toggle since it lives in
+// the same part of the page and needed no app.js changes either.
+// ============================================================================
+
+(function(){
+
+  function _d(nSides){ return 1 + Math.floor(Math.random() * nSides); }
+
+  function rollDiceExpression(expr){
+    if(!expr) return null;
+    const terms = expr.match(/[+-]?[^+-]+/g) || [];
+    let total = 0;
+    const parts = [];
+    terms.forEach(raw=>{
+      const trimmed = raw.trim();
+      const sign = trimmed.startsWith('-') ? -1 : 1;
+      const term = trimmed.replace(/^[+-]/, '').trim();
+      const diceMatch = term.match(/^(\d+)d(\d+)$/i);
+      if(diceMatch){
+        const n = parseInt(diceMatch[1],10), s = parseInt(diceMatch[2],10);
+        const rolls = [];
+        for(let i=0;i<n;i++) rolls.push(_d(s));
+        const sum = rolls.reduce((a,b)=>a+b,0);
+        total += sign*sum;
+        parts.push(`${sign<0?'-':''}${n}d${s} [${rolls.join('+')}]`);
+      } else if(/^\d+$/.test(term)){
+        const val = parseInt(term,10);
+        total += sign*val;
+        parts.push(`${sign<0?'-':'+'}${val}`);
+      } else if(term){
+        parts.push(term);
+      }
+    });
+    return { total, breakdown: parts.join(' ') };
+  }
+
+  // Pulls the leading "NdM[+/-K]" chunk out of a damage/type string like
+  // "1d8+4 slashing" so the dice part can be rolled and the rest shown as-is.
+  function splitDamageString(str){
+    if(!str) return { dice:null, rest:'' };
+    const m = str.match(/^\s*((?:\d+d\d+)(?:\s*[+-]\s*\d+)?)\s*(.*)$/i);
+    if(!m) return { dice:null, rest:str };
+    return { dice: m[1].replace(/\s+/g,''), rest: m[2].trim() };
+  }
+
+  function lookupWeaponData(name){
+    if(!name) return null;
+    const key = Object.keys(WEAPONS||{}).find(k => k.toLowerCase() === name.trim().toLowerCase());
+    if(key) return WEAPONS[key];
+    const mkey = Object.keys(MARTIAL_WEAPONS||{}).find(k => k.toLowerCase() === name.trim().toLowerCase());
+    if(mkey) return MARTIAL_WEAPONS[mkey];
+    return null;
+  }
+
+  function _rowData(tr){
+    return {
+      name: tr.querySelector('.atk-name').value.trim(),
+      bonus: tr.querySelector('.atk-bonus').value.trim(),
+      dmg: tr.querySelector('.atk-dmg').value.trim()
+    };
+  }
+  function getAllAttackRows(){
+    const body = document.querySelector('#attacksTable tbody');
+    if(!body) return [];
+    return [...body.querySelectorAll('tr')].map(_rowData).filter(r => r.name);
+  }
+
+  function openWeaponModal(kicker, title, bodyHtml){
+    const overlay = document.getElementById('spellModalOverlay');
+    if(!overlay) return;
+    document.getElementById('spellModalKicker').textContent = kicker;
+    document.getElementById('spellModalTitle').textContent = title;
+    document.getElementById('spellModalBody').innerHTML = bodyHtml;
+    overlay.style.display = 'flex';
+  }
+
+  function buildRollContent(row){
+    const { dice, rest } = splitDamageString(row.dmg);
+    const bonusNum = parseInt((row.bonus||'').replace(/[^\d+-]/g,''), 10);
+    let html = '';
+    if(!isNaN(bonusNum)){
+      const roll = _d(20);
+      html += `<div class="roll-line">Attack roll: <span class="roll-total">${roll + bonusNum}</span> (d20: ${roll} ${bonusNum>=0?'+':'-'} ${Math.abs(bonusNum)})</div>`;
+    } else if(row.bonus){
+      html += `<div class="roll-line">Attack bonus on sheet: ${row.bonus} (couldn't parse a number — roll a raw d20 and add it yourself).</div>`;
+    }
+    if(dice){
+      const result = rollDiceExpression(dice);
+      if(result){
+        html += `<div class="roll-line">Damage (${dice}${rest?`, ${rest}`:''}): <span class="roll-total">${result.total}</span><br><span class="roll-note" style="margin-top:0;">${result.breakdown}</span></div>`;
+      }
+    } else if(row.dmg){
+      html += `<div class="roll-line">Damage on sheet: ${row.dmg} (not a plain dice expression — roll manually).</div>`;
+    }
+    return html || `<div class="desc-text">No bonus or damage set on this row yet.</div>`;
+  }
+
+  function buildInfoContent(row){
+    const data = lookupWeaponData(row.name);
+    let html = `<div class="roll-line">Bonus: ${row.bonus || '—'}<br>Damage: ${row.dmg || '—'}</div>`;
+    if(data){
+      const props = [];
+      if(data.finesse) props.push('finesse');
+      if(data.versatile) props.push(`versatile (${data.versatile})`);
+      if(data.twoHanded) props.push('two-handed');
+      if(data.light) props.push('light');
+      if(data.heavy) props.push('heavy');
+      if(data.reach) props.push('reach');
+      if(data.thrown) props.push('thrown');
+      html += `<div class="desc-text">Base weapon: ${data.dmg} ${data.type}${props.length?` — ${props.join(', ')}`:''}.</div>`;
+    } else {
+      html += `<div class="desc-text">Custom entry — no matching base weapon in the reference list, showing sheet values only.</div>`;
+    }
+    return html;
+  }
+
+  function getWeaponBadge(row){
+    const bonusNum = parseInt((row.bonus||'').replace(/[^\d+-]/g,''), 10);
+    return isNaN(bonusNum) ? '' : `🎯 ${bonusNum>=0?'+':''}${bonusNum}`;
+  }
+
+  function renderWeaponsList(){
+    const container = document.getElementById('weaponsList');
+    if(!container) return;
+    const rows = getAllAttackRows();
+    if(!rows.length){
+      container.innerHTML = `<div class="spellbook-empty">No weapons/attacks added yet — add some in Attacks &amp; Cantrips, then open this panel to use them here.</div>`;
+      return;
+    }
+    container.innerHTML = rows.map(r=>{
+      const badge = getWeaponBadge(r);
+      return `<div class="spellbook-item" data-name="${r.name.replace(/"/g,'&quot;')}">
+        <div class="sb-name"><span class="sb-title">${r.name}</span></div>
+        ${badge?`<span class="sb-badge">${badge}</span>`:''}
+        <button type="button" class="sb-roll" title="Roll">🎲</button>
+      </div>`;
+    }).join('');
+
+    container.querySelectorAll('.spellbook-item').forEach(item=>{
+      const name = item.dataset.name;
+      const row = rows.find(r => r.name === name);
+      item.querySelector('.sb-name').addEventListener('click', ()=>{
+        openWeaponModal('Details', name, buildInfoContent(row));
+      });
+      item.querySelector('.sb-roll').addEventListener('click', (e)=>{
+        e.stopPropagation();
+        openWeaponModal('Roll', name, buildRollContent(row));
+      });
+    });
+  }
+
+  function openWeapons(){
+    renderWeaponsList();
+    document.getElementById('weaponsOverlay').style.display = 'flex';
+  }
+  function closeWeapons(){
+    document.getElementById('weaponsOverlay').style.display = 'none';
+  }
+
+  function wireWeaponsChrome(){
+    const openBtn = document.getElementById('btnOpenWeapons');
+    const closeBtn = document.getElementById('btnCloseWeapons');
+    const overlay = document.getElementById('weaponsOverlay');
+    if(openBtn) openBtn.addEventListener('click', openWeapons);
+    if(closeBtn) closeBtn.addEventListener('click', closeWeapons);
+    if(overlay) overlay.addEventListener('click', (e)=>{ if(e.target===overlay) closeWeapons(); });
+    document.addEventListener('keydown', (e)=>{ if(e.key==='Escape') closeWeapons(); });
+
+    const body = document.querySelector('#attacksTable tbody');
+    if(body){
+      body.addEventListener('change', ()=>{ if(overlay.style.display !== 'none') renderWeaponsList(); });
+      body.addEventListener('input', ()=>{ if(overlay.style.display !== 'none') renderWeaponsList(); });
+      const observer = new MutationObserver(()=>{ if(overlay.style.display !== 'none') renderWeaponsList(); });
+      observer.observe(body, { childList: true });
+    }
+  }
+
+  // ---------------------------------------------------------------------
+  // Actions section collapse/reveal (moved out of the main view since the
+  // Weapons panel now covers day-to-day combat use)
+  // ---------------------------------------------------------------------
+  function wireActionsCollapse(){
+    const card = document.getElementById('actionsCard');
+    const bar = document.getElementById('actionsCollapsedBar');
+    const showBtn = document.getElementById('btnShowActions');
+    if(!card || !bar || !showBtn) return;
+    showBtn.addEventListener('click', ()=>{
+      card.style.display = '';
+      bar.style.display = 'none';
+      card.scrollIntoView({behavior:'smooth', block:'start'});
+    });
+  }
+
+  function init(){
+    wireWeaponsChrome();
+    wireActionsCollapse();
+  }
+
+  if(document.readyState === 'loading'){
+    document.addEventListener('DOMContentLoaded', init);
+  } else {
+    init();
+  }
+
+})();
