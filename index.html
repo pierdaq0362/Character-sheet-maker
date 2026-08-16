@@ -339,6 +339,11 @@
     flex:0 0 auto; padding:10px 14px; display:flex; flex-wrap:wrap; gap:6px;
     border-bottom:2px solid var(--gold); background:var(--parchment-dark);
   }
+  .spellbook-rest-row{
+    flex:0 0 auto; padding:10px 14px 0; display:flex; gap:8px;
+    background:var(--parchment-dark);
+  }
+  .spellbook-rest-row button{flex:1 1 0; font-size:11.5px; padding:6px 4px;}
   .spellbook-slot-chip{
     font-family:'JetBrains Mono', monospace; font-size:11.5px;
     background:var(--parchment); border:1px solid var(--line); border-radius:12px;
@@ -823,6 +828,10 @@
       <div class="spellbook-header">
         <h3>📖 Spellbook</h3>
         <button type="button" id="btnCloseSpellbook" class="spell-modal-close" aria-label="Close">✕</button>
+      </div>
+      <div class="spellbook-rest-row">
+        <button type="button" class="btn small secondary" id="btnShortRest">☀️ Short Rest</button>
+        <button type="button" class="btn small secondary" id="btnLongRest">🌙 Long Rest</button>
       </div>
       <div id="spellbookSlots" class="spellbook-slots"></div>
       <div id="spellbookList" class="spellbook-list"></div>
