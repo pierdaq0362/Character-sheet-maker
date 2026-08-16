@@ -443,6 +443,14 @@
   .summon-picker-item:hover{border-color:var(--gold);}
   .summon-picker-item .sp-name{font-weight:700; font-size:13.5px; flex:1 1 auto;}
   .summon-picker-item .sp-meta{font-size:11px; color:var(--ink-soft); font-family:'JetBrains Mono',monospace;}
+
+  .item-picker-cats{display:flex; gap:8px; margin-bottom:4px;}
+  .item-picker-cats button{
+    flex:1 1 0; padding:14px 6px; font-size:12.5px; text-align:center;
+    border:1px solid var(--line); background:#fffaf0; border-radius:8px; cursor:pointer;
+  }
+  .item-picker-cats button:hover{border-color:var(--gold);}
+  .item-picker-back{background:none; border:none; color:var(--burgundy); cursor:pointer; font-size:12px; margin-bottom:8px; padding:0;}
   .new-since-banner{
     background:#fff7e6;
     border:1px solid var(--gold);
@@ -927,6 +935,15 @@
     </aside>
   </div>
 
+  <div id="itemPickerOverlay" class="spell-modal-overlay" style="display:none;">
+    <div class="spell-modal-box">
+      <button type="button" id="itemPickerClose" class="spell-modal-close" aria-label="Close">✕</button>
+      <div class="spell-modal-kicker" id="itemPickerKicker">Add Item</div>
+      <h3 id="itemPickerTitle">What did you pick up?</h3>
+      <div id="itemPickerBody" class="spell-modal-body"></div>
+    </div>
+  </div>
+
   <div class="grid">
 
     <!-- LEFT COLUMN: abilities -->
@@ -992,7 +1009,10 @@
           <thead><tr><th style="width:38%">Name</th><th style="width:18%">Bonus</th><th>Damage / Type</th><th style="width:24px"></th></tr></thead>
           <tbody></tbody>
         </table></div>
-        <div class="row-actions"><button class="btn small secondary" id="addAttack">+ Add Row</button></div>
+        <div class="row-actions">
+          <button class="btn small secondary" id="addAttack">+ Add Row</button>
+          <button class="btn small" id="addItemPicker">+ Add Item</button>
+        </div>
       </div>
 
       <div class="card action-card" id="actionsCard" style="display:none;">
