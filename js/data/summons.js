@@ -26,6 +26,25 @@ const SUMMON_LIBRARY = {
       { name:"Sting — Poison Save", save:{ ability:"Con", dc:11 }, text:"On a hit from Sting, target must succeed or be poisoned 1 hour (unconscious too if it fails by 5+)." }
     ]
   },
+  desertPseudodragon: {
+    name: "Desert Pseudodragon",
+    size: "Tiny", type: "dragon", alignment: "neutral good", cr: "1/4",
+    ac: 13, hp: 7, hitDice: "2d4+2", speed: "15 ft., fly 60 ft.",
+    abilities: { str:6, dex:15, con:13, int:10, wis:12, cha:10 },
+    skills: "Perception +5, Stealth +6",
+    senses: "blindsight 10 ft., darkvision 60 ft., passive Perception 15",
+    languages: "understands Common and Draconic but can't speak",
+    traits: [
+      { name:"Variant note", text:"Desert variant — no poison stinger. Sandy-colored scales in place of the standard Pseudodragon's coloring." },
+      { name:"Keen Senses", text:"Advantage on Wisdom (Perception) checks that rely on sight, hearing, or smell." },
+      { name:"Magic Resistance", text:"Advantage on saving throws against spells and other magical effects." },
+      { name:"Limited Telepathy", text:"Can telepathically share simple ideas, emotions, and images with a creature within 100 ft. that can understand a language." },
+      { name:"Desert Camouflage", text:"Advantage on Dexterity (Stealth) checks made to hide in sandy or rocky terrain." }
+    ],
+    actions: [
+      { name:"Bite", toHit:4, damage:"1d4+2", type:"piercing", text:"Melee Weapon Attack, reach 5 ft., one target." }
+    ]
+  },
   imp: {
     name: "Imp",
     size: "Tiny", type: "fiend (devil, shapechanger)", alignment: "lawful evil", cr: "1",
