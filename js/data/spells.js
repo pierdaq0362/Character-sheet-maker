@@ -510,6 +510,70 @@ const SPELL_DAMAGE = {
     document.getElementById('spellbookOverlay').style.display = 'none';
   }
 
+  // ---------------------------------------------------------------------
+  // Rests — 5e rules: a Long Rest restores every spell slot and every
+  // limited-use feature. A Short Rest only restores slots for classes
+  // with Pact Magic (Warlock), and only restores limited-use features
+  // explicitly marked "Short Rest" recharge.
+  // ---------------------------------------------------------------------
+  function _resetActionUses(rechargeTypes){
+    let count = 0;
+    ['#actionsTable', '#bonusActionsTable'].forEach(sel=>{
+      document.querySelectorAll(`${sel} tbody tr`).forEach(tr=>{
+        const limited = tr.querySelector('.act-limited');
+        const rechargeSel = tr.querySelector('.act-recharge');
+        if(!limited || !limited.checked || !rechargeSel) return;
+        if(!rechargeTypes.includes(rechargeSel.value)) return;
+        const maxEl = tr.querySelector('.act-uses-max');
+        const curEl = tr.querySelector('.act-uses-current');
+        if(maxEl && curEl && curEl.value !== maxEl.value){
+          curEl.value = maxEl.value || '0';
+          curEl.dispatchEvent(new Event('change', { bubbles: true }));
+          count++;
+        }
+      });
+    });
+    return count;
+  }
+
+  function longRest(){
+    let slotsRestored = 0;
+    for(let l=1;l<=9;l++){
+      const { used } = _slotFields(l);
+      if(used && parseInt(used.value,10) > 0){
+        used.value = '0';
+        used.dispatchEvent(new Event('change', { bubbles: true }));
+        slotsRestored++;
+      }
+    }
+    const featuresRestored = _resetActionUses(['long', 'short']);
+    renderSpellbookSlots();
+    if(typeof showToast === 'function'){
+      showToast(`🌙 Long Rest — all spell slots and limited-use features restored.`);
+    }
+  }
+
+  function shortRest(){
+    let slotsRestored = 0;
+    const hasPactMagic = (()=>{ try { return !!(ACTIVE.cls && ACTIVE.cls.pactMagic); } catch(e){ return false; } })();
+    if(hasPactMagic){
+      for(let l=1;l<=9;l++){
+        const { used } = _slotFields(l);
+        if(used && parseInt(used.value,10) > 0){
+          used.value = '0';
+          used.dispatchEvent(new Event('change', { bubbles: true }));
+          slotsRestored++;
+        }
+      }
+      renderSpellbookSlots();
+    }
+    const featuresRestored = _resetActionUses(['short']);
+    if(typeof showToast === 'function'){
+      const slotMsg = hasPactMagic ? ' Pact Magic slots restored.' : ' (Spell slots don\'t recover on a Short Rest for this class — only on a Long Rest.)';
+      showToast(`☀️ Short Rest — limited-use features on a Short Rest recharge restored.${slotMsg}`);
+    }
+  }
+
   function wireSpellbookChrome(){
     const openBtn = document.getElementById('btnOpenSpellbook');
     const closeBtn = document.getElementById('btnCloseSpellbook');
@@ -518,6 +582,11 @@ const SPELL_DAMAGE = {
     if(closeBtn) closeBtn.addEventListener('click', closeSpellbook);
     if(overlay) overlay.addEventListener('click', (e)=>{ if(e.target === overlay) closeSpellbook(); });
     document.addEventListener('keydown', (e)=>{ if(e.key === 'Escape') closeSpellbook(); });
+
+    const longBtn = document.getElementById('btnLongRest');
+    const shortBtn = document.getElementById('btnShortRest');
+    if(longBtn) longBtn.addEventListener('click', longRest);
+    if(shortBtn) shortBtn.addEventListener('click', shortRest);
 
     // keep the sidebar in sync with edits made in the underlying table
     // while it's open (name/level/prepared changes, rows added/removed)
