@@ -237,3 +237,147 @@ const MARTIAL_WEAPONS = {
   }
 
 })();
+
+// ============================================================================
+// "+ Add Item" picker — lets a player add gear gained mid-campaign without
+// hand-filling a blank row. Three categories: Weapon (adds a computed
+// Attacks row, same math as the automatic starting-weapon sync in
+// js/app.js), Item, and Magic Item (both append a line to the Equipment
+// notes field). Self-contained: doesn't touch js/app.js.
+// ============================================================================
+
+const ITEM_LIST = [
+  "Rope (50 ft.)", "Torch", "Rations (1 day)", "Waterskin", "Bedroll",
+  "Thieves' Tools", "Healer's Kit", "Crowbar", "Grappling Hook", "Lantern",
+  "Oil (flask)", "Tinderbox", "Manacles", "Climber's Kit", "Component Pouch",
+  "Spellbook", "Shovel", "Fishing Tackle", "Signal Whistle", "Sack"
+];
+
+const MAGIC_ITEMS = [
+  { name: "Potion of Healing", effect: "Regain 2d4+2 hit points when you drink it." },
+  { name: "Bag of Holding", effect: "Interior space holds up to 500 lb. (weighs 15 lb. regardless)." },
+  { name: "Cloak of Protection", effect: "+1 to AC and saving throws (requires attunement)." },
+  { name: "Wand of Magic Missiles", effect: "7 charges; expend 1+ to cast Magic Missile at that level." },
+  { name: "Ring of Protection", effect: "+1 to AC and saving throws (requires attunement)." },
+  { name: "Boots of Elvenkind", effect: "Advantage on Stealth checks that rely on moving silently." },
+  { name: "Cloak of Elvenkind", effect: "Advantage on Stealth checks; disadvantage on checks to see you while worn (hood up)." },
+  { name: "Potion of Greater Healing", effect: "Regain 4d4+4 hit points when you drink it." },
+  { name: "Bag of Tricks", effect: "Reach in and pull out a random small animal (rolled)." },
+  { name: "Immovable Rod", effect: "Push the button to fix it in place mid-air; holds up to 8,000 lb." }
+];
+
+(function(){
+
+  function appendToEquipmentNotes(line){
+    const ta = document.querySelector('[name="equipment"]');
+    if(!ta) return;
+    ta.value = ta.value ? `${ta.value}\n${line}` : line;
+    ta.dispatchEvent(new Event('input', { bubbles: true }));
+  }
+
+  function fmtBonus(n){ return (n>=0?'+':'') + n; }
+
+  function addWeaponRow(weaponName){
+    const w = (typeof WEAPONS !== 'undefined' && WEAPONS[weaponName]) || (typeof MARTIAL_WEAPONS !== 'undefined' && MARTIAL_WEAPONS[weaponName]);
+    if(!w) return;
+    let strMod = 0, dexMod = 0, pb = 2;
+    try { strMod = currentAbilityMod('str'); dexMod = currentAbilityMod('dex'); } catch(e){}
+    try { pb = profBonusFor(document.querySelector('[name="classLevel"]').value); } catch(e){}
+    const mod = w.finesse ? Math.max(strMod, dexMod) : (w.ranged ? dexMod : strMod);
+    const atkBonus = fmtBonus(pb + mod);
+    const dmgText = `${w.dmg} ${fmtBonus(mod)} ${w.type}`;
+
+    const body = (typeof attacksBody !== 'undefined') ? attacksBody : document.querySelector('#attacksTable tbody');
+    if(!body) return;
+    let tr;
+    try { tr = makeAttackRow({ name: weaponName, bonus: atkBonus, dmg: dmgText }); }
+    catch(e){ return; }
+    body.appendChild(tr);
+    if(typeof showToast === 'function') showToast(`${weaponName} added to Attacks (assumes proficiency).`);
+  }
+
+  // ---------------------------------------------------------------------
+  // Picker UI (category -> list)
+  // ---------------------------------------------------------------------
+  function showCategoryStep(){
+    document.getElementById('itemPickerTitle').textContent = 'What did you pick up?';
+    document.getElementById('itemPickerBody').innerHTML = `
+      <div class="item-picker-cats">
+        <button type="button" data-cat="weapon">🗡️<br>Weapon</button>
+        <button type="button" data-cat="item">🎒<br>Item</button>
+        <button type="button" data-cat="magic">✨<br>Magic Item</button>
+      </div>`;
+    document.getElementById('itemPickerBody').querySelectorAll('[data-cat]').forEach(btn=>{
+      btn.addEventListener('click', ()=> showListStep(btn.dataset.cat));
+    });
+  }
+
+  function showListStep(cat){
+    const titleEl = document.getElementById('itemPickerTitle');
+    const bodyEl = document.getElementById('itemPickerBody');
+    let backHtml = `<button type="button" class="item-picker-back">← Back</button>`;
+    let listHtml = '';
+
+    if(cat === 'weapon'){
+      titleEl.textContent = 'Choose a Weapon';
+      const names = [
+        ...Object.keys(typeof WEAPONS !== 'undefined' ? WEAPONS : {}),
+        ...Object.keys(typeof MARTIAL_WEAPONS !== 'undefined' ? MARTIAL_WEAPONS : {})
+      ];
+      listHtml = names.map(n=>{
+        const w = (WEAPONS && WEAPONS[n]) || (MARTIAL_WEAPONS && MARTIAL_WEAPONS[n]);
+        return `<div class="summon-picker-item" data-name="${n}"><span class="sp-name">${n}</span><span class="sp-meta">${w.dmg} ${w.type}</span></div>`;
+      }).join('');
+    } else if(cat === 'item'){
+      titleEl.textContent = 'Choose an Item';
+      listHtml = ITEM_LIST.map(n=>`<div class="summon-picker-item" data-name="${n}"><span class="sp-name">${n}</span></div>`).join('');
+    } else {
+      titleEl.textContent = 'Choose a Magic Item';
+      listHtml = MAGIC_ITEMS.map(it=>`<div class="summon-picker-item" data-name="${it.name}"><span class="sp-name">${it.name}</span><span class="sp-meta">${it.effect}</span></div>`).join('');
+    }
+
+    bodyEl.innerHTML = backHtml + listHtml;
+    bodyEl.querySelector('.item-picker-back').addEventListener('click', showCategoryStep);
+    bodyEl.querySelectorAll('.summon-picker-item').forEach(row=>{
+      row.addEventListener('click', ()=>{
+        const name = row.dataset.name;
+        if(cat === 'weapon'){
+          addWeaponRow(name);
+        } else if(cat === 'item'){
+          appendToEquipmentNotes(name);
+          if(typeof showToast === 'function') showToast(`${name} added to Equipment.`);
+        } else {
+          const it = MAGIC_ITEMS.find(m => m.name === name);
+          appendToEquipmentNotes(`${name} — ${it ? it.effect : ''}`);
+          if(typeof showToast === 'function') showToast(`${name} added to Equipment.`);
+        }
+        closeItemPicker();
+      });
+    });
+  }
+
+  function openItemPicker(){
+    showCategoryStep();
+    document.getElementById('itemPickerOverlay').style.display = 'flex';
+  }
+  function closeItemPicker(){
+    document.getElementById('itemPickerOverlay').style.display = 'none';
+  }
+
+  function init2(){
+    const openBtn = document.getElementById('addItemPicker');
+    const closeBtn = document.getElementById('itemPickerClose');
+    const overlay = document.getElementById('itemPickerOverlay');
+    if(openBtn) openBtn.addEventListener('click', openItemPicker);
+    if(closeBtn) closeBtn.addEventListener('click', closeItemPicker);
+    if(overlay) overlay.addEventListener('click', (e)=>{ if(e.target===overlay) closeItemPicker(); });
+    document.addEventListener('keydown', (e)=>{ if(e.key==='Escape') closeItemPicker(); });
+  }
+
+  if(document.readyState === 'loading'){
+    document.addEventListener('DOMContentLoaded', init2);
+  } else {
+    init2();
+  }
+
+})();
