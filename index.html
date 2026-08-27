@@ -454,7 +454,7 @@
 
   /* --- DM Mode --- */
   .dm-mode-overlay{
-    position:fixed; inset:0; background:var(--parchment); z-index:400;
+    position:fixed; inset:0; background:var(--parchment); z-index:150;
     overflow-y:auto;
   }
   .dm-mode-page{max-width:1100px; margin:0 auto; padding:14px;}
@@ -482,6 +482,22 @@
   .encounter-row .er-remove{border:none; background:none; color:var(--ink-soft); cursor:pointer; font-size:13px;}
   .encounter-row .er-remove:hover{color:var(--burgundy);}
   .encounter-empty{color:var(--ink-soft); font-size:12.5px;}
+
+  .infusion-item{
+    background:#fffaf0; border:1px solid var(--line); border-radius:7px;
+    padding:8px 10px; margin-bottom:7px;
+  }
+  .infusion-item.checked{border-color:var(--gold); background:#fff3d6;}
+  .infusion-item .if-row{display:flex; align-items:flex-start; gap:8px;}
+  .infusion-item .if-name{font-weight:700; font-size:13px;}
+  .infusion-item .if-text{font-size:11.5px; color:var(--ink-soft); line-height:1.4; margin-top:2px;}
+  .infusion-item input[type="checkbox"]{margin-top:2px; accent-color:var(--burgundy);}
+  .infusion-item .if-applied{
+    margin-top:6px; width:100%; font-size:12px; padding:4px 6px;
+    border:1px solid var(--line); border-radius:4px; display:none;
+  }
+  .infusion-item.checked .if-applied{display:block;}
+  .infusions-limit-warning{color:var(--burgundy); font-size:12px; margin-top:4px;}
   .new-since-banner{
     background:#fff7e6;
     border:1px solid var(--gold);
@@ -884,6 +900,10 @@
         <select class="plain-input" id="buildBackground" name="buildBackground">
           <option value="">— choose —</option>
           <option value="simicScientist">Simic Scientist</option>
+          <option value="soldier">Soldier</option>
+          <option value="sage">Sage</option>
+          <option value="criminal">Criminal</option>
+          <option value="folkHero">Folk Hero</option>
         </select>
       </div>
       <div class="field">
@@ -1036,6 +1056,17 @@
     </aside>
   </div>
 
+  <div id="infusionsOverlay" class="spellbook-overlay" style="display:none;">
+    <aside class="spellbook-drawer">
+      <div class="spellbook-header">
+        <h3>🔧 Infusions</h3>
+        <button type="button" id="btnCloseInfusions" class="spell-modal-close" aria-label="Close">✕</button>
+      </div>
+      <div id="infusionsSummary" class="spellbook-slots"></div>
+      <div id="infusionsList" class="spellbook-list"></div>
+    </aside>
+  </div>
+
   <div class="grid">
 
     <!-- LEFT COLUMN: abilities -->
@@ -1130,7 +1161,9 @@
       </div>
 
       <div class="card">
-        <h2>Equipment</h2>
+        <h2>Equipment
+          <button type="button" class="btn small" id="btnOpenInfusions" style="margin-left:auto; align-self:center;">🔧 Infusions</button>
+        </h2>
         <div class="currency-row">
           <div class="cur"><label>CP</label><input name="cp" class="mono"></div>
           <div class="cur"><label>SP</label><input name="sp" class="mono"></div>
@@ -1205,6 +1238,7 @@
   </div>
 
   <input type="hidden" name="activeSummons" id="activeSummonsField" value="">
+  <input type="hidden" name="knownInfusions" id="knownInfusionsField" value="">
 </div>
 
 <footer class="hint">
