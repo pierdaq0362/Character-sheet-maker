@@ -1091,10 +1091,10 @@ function renderChoicesPanel(race, cls, bg, level){
     html += `</div>`;
   }
 
-  if(race){
-    html += `<div class="choice-group"><div class="choice-group-title">${race.name} — Tireless Precision</div>
+  if(race && race.skillChoice){
+    html += `<div class="choice-group"><div class="choice-group-title">${race.skillChoice.label || (race.name + ' — Bonus Proficiency')}</div>
       <div class="choice-row"><label class="inline">Skill</label>${buildSelect('choice_racialSkill', race.skillChoice.options.map(name=>({value:skillKeyByName(name), label:name})))}</div>
-      <div class="choice-row"><label class="inline">Tool</label>${buildSelect('choice_racialTool', STANDARD_TOOLS)}</div>
+      ${race.skillChoice.tool !== false ? `<div class="choice-row"><label class="inline">Tool</label>${buildSelect('choice_racialTool', STANDARD_TOOLS)}</div>` : ''}
       </div>`;
   }
 
