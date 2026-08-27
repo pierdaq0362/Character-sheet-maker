@@ -14,5 +14,29 @@ const RACES = {
       "Partially Amphibious: You can breathe underwater for up to 1 hour per long rest.",
       "Ability Score Increase: +2 Intelligence, +1 Wisdom (already applied to your modifiers above)."
     ]
+  },
+  tiefling: {
+    name: 'Tiefling',
+    speed: '30 ft',
+    asi: {cha:2, int:1},
+    numRacialLanguages: 1,
+    features: [
+      "Darkvision: See in dim light within 60 ft. as if bright, and in darkness as if dim (no color).",
+      "Hellish Resistance: Resistance to fire damage.",
+      "Infernal Legacy: You know the Thaumaturgy cantrip. At 3rd level, cast Hellish Rebuke once per long rest (or with a spell slot). At 5th level, cast Darkness once per long rest (or with a spell slot). Charisma is your spellcasting ability for these.",
+      "Ability Score Increase: +2 Charisma, +1 Intelligence (already applied to your modifiers above)."
+    ]
+  },
+  halfling: {
+    name: 'Halfling',
+    speed: '25 ft',
+    asi: {dex:2, con:1},
+    numRacialLanguages: 1,
+    features: [
+      "Lucky: When you roll a 1 on a d20 for an attack roll, ability check, or saving throw, you can reroll the die and must use the new roll.",
+      "Brave: Advantage on saving throws against being frightened.",
+      "Halfling Nimbleness: You can move through the space of any creature that is a size larger than you.",
+      "Ability Score Increase: +2 Dexterity, +1 Constitution (already applied to your modifiers above)."
+    ]
   }
 };
