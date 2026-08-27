@@ -80,7 +80,7 @@ const CLASSES = {
     features: [
       {lvl:1, text:"Magical Tinkering: As an action, touch a Tiny nonmagical object and give it a minor magical property (light, sound, sensor message, or the appearance of a mystical mark)."},
       {lvl:1, text:"Spellcasting: Intelligence-based, prepared caster. Requires thieves'/artisan's tools in hand to cast."},
-      {lvl:2, text:"Infuse Item: Learn 4 infusions, can have 2 infused items at once (after a long rest). Common infusions — Enhanced Defense (+1 AC to armor/shield), Enhanced Weapon (+1 attack/damage), Repeating Shot (+1 attack/damage, never needs ammo), Resistant Armor (resistance to one damage type while worn), Enhanced Arcane Focus (+1 spell attack/DC), Homunculus Servant (a Tiny construct companion), Boots of the Winding Path (teleport to a spot you've marked), Replicate Magic Item (Bag of Holding, Goggles of Night, etc. — pick from the DMG list), Mind Sharpener (gain temp HP that also grants advantage on Concentration checks), Radiant Weapon (+1 weapon that can flare light and deal extra radiant damage)."},
+      {lvl:2, text:"Infuse Item: Learn 4 infusions, can have 2 infused items at once (after a long rest). Use the 🔧 Infusions panel (Equipment section) to pick and track them."},
       {lvl:6, text:"Infuse Item: now know 6 infusions, up to 3 infused items at once."},
       {lvl:3, text:"Artificer Specialist: Choose a subclass."},
       {lvl:3, text:"The Right Tool for the Job: Spend 1 hour to magically create one set of artisan's tools in a nearby unoccupied space."},
@@ -179,3 +179,160 @@ const CLASSES = {
     }
   }
 };
+
+// ============================================================================
+// Artificer Infusions picker — a proper checklist instead of a wall of text
+// buried in Features. Self-contained: doesn't touch js/app.js. Persists via
+// the sheet's existing generic [name]-field save/load, same pattern as
+// js/data/summons.js's #activeSummonsField.
+// ============================================================================
+
+const INFUSIONS_LIBRARY = [
+  { id:'enhancedDefense', name:'Enhanced Defense', text:'+1 AC to a suit of armor, or +1 AC to a shield, while worn/carried.' },
+  { id:'enhancedWeapon', name:'Enhanced Weapon', text:'+1 to attack and damage rolls with a nonmagical weapon.' },
+  { id:'repeatingShot', name:'Repeating Shot', text:'+1 to attack and damage rolls with a nonmagical ammunition-using weapon; it never needs ammunition when infused.' },
+  { id:'resistantArmor', name:'Resistant Armor', text:'While worn, grants resistance to one damage type you choose when you infuse it.' },
+  { id:'enhancedArcaneFocus', name:'Enhanced Arcane Focus', text:'+1 to spell attack rolls made with this item as a focus, and it can channel your spells.' },
+  { id:'homunculusServant', name:'Homunculus Servant', text:'Infuse a gem, crystal, or metal figurine to create a Tiny construct companion (see the Summons panel).' },
+  { id:'bootsWindingPath', name:'Boots of the Winding Path', text:'As a bonus action, teleport to a spot you\'ve previously marked while wearing them.' },
+  { id:'replicateMagicItem', name:'Replicate Magic Item', text:'Pick from a DMG list of minor magic items (Bag of Holding, Goggles of Night, Cloak of Elvenkind, etc.) — write which one in the notes.' },
+  { id:'mindSharpener', name:'Mind Sharpener', text:'While holding it, gain temporary HP when you start Concentrating, and advantage on Concentration checks while you have any of those temp HP left.' },
+  { id:'radiantWeapon', name:'Radiant Weapon', text:'+1 weapon; can flare to shed light and, once per turn on a hit, add 1d4 radiant damage.' },
+  { id:'returningWeapon', name:'Returning Weapon', text:'A thrown weapon that flies back to your hand right after it\'s thrown or after missing/hitting.' },
+  { id:'armorOfMagicalStrength', name:'Armor of Magical Strength', text:'While worn, store up to 20 temporary HP (as a bonus action reaction to being reduced to 0) — infuse into a suit of armor.' }
+];
+
+// level -> known infusions / max simultaneously infused items
+const INFUSION_PROGRESSION = [
+  { lvl:18, known:12, active:6 },
+  { lvl:14, known:10, active:5 },
+  { lvl:10, known:8, active:4 },
+  { lvl:6, known:6, active:3 },
+  { lvl:2, known:4, active:2 }
+];
+
+(function(){
+
+  function infusionCaps(){
+    const classLevelField = document.querySelector('[name="classLevel"]');
+    const text = classLevelField ? classLevelField.value : '';
+    const m = text.match(/(\d+)/);
+    const level = m ? parseInt(m[1], 10) : 0;
+    const isArtificer = /artificer/i.test(text);
+    const tier = INFUSION_PROGRESSION.find(t => level >= t.lvl);
+    return {
+      level, isArtificer,
+      known: tier ? tier.known : 0,
+      active: tier ? tier.active : 0
+    };
+  }
+
+  function readKnown(){
+    const field = document.getElementById('knownInfusionsField');
+    if(!field || !field.value) return [];
+    try { const arr = JSON.parse(field.value); return Array.isArray(arr) ? arr : []; } catch(e){ return []; }
+  }
+  function writeKnown(list){
+    const field = document.getElementById('knownInfusionsField');
+    if(field) field.value = JSON.stringify(list);
+  }
+
+  function renderSummary(){
+    const el = document.getElementById('infusionsSummary');
+    if(!el) return;
+    const caps = infusionCaps();
+    const known = readKnown();
+    let text;
+    if(!caps.isArtificer){
+      text = `Class field doesn't say "Artificer" — showing the full reference list with no known-count limit.`;
+    } else if(caps.level < 2){
+      text = `Infuse Item unlocks at Artificer level 2 — set your level first.`;
+    } else {
+      text = `Known: ${known.length} / ${caps.known} · Max infused at once: ${caps.active}`;
+    }
+    el.innerHTML = `<span style="font-size:12px;">${text}</span>`;
+  }
+
+  function renderList(){
+    const container = document.getElementById('infusionsList');
+    if(!container) return;
+    const known = readKnown();
+    const caps = infusionCaps();
+    container.innerHTML = INFUSIONS_LIBRARY.map(inf=>{
+      const entry = known.find(k => k.id === inf.id);
+      const checked = !!entry;
+      return `<div class="infusion-item${checked?' checked':''}" data-id="${inf.id}">
+        <div class="if-row">
+          <input type="checkbox" class="if-check" ${checked?'checked':''}>
+          <div>
+            <div class="if-name">${inf.name}</div>
+            <div class="if-text">${inf.text}</div>
+          </div>
+        </div>
+        <input type="text" class="if-applied" placeholder="Applied to which item? (optional)" value="${entry && entry.appliedTo ? entry.appliedTo.replace(/"/g,'&quot;') : ''}">
+      </div>`;
+    }).join('');
+
+    container.querySelectorAll('.infusion-item').forEach(row=>{
+      const id = row.dataset.id;
+      const checkbox = row.querySelector('.if-check');
+      const appliedInput = row.querySelector('.if-applied');
+      checkbox.addEventListener('change', ()=>{
+        let list = readKnown();
+        if(checkbox.checked){
+          if(caps.isArtificer && caps.known && list.length >= caps.known){
+            checkbox.checked = false;
+            if(typeof showToast === 'function') showToast(`You only know ${caps.known} infusions at this level — uncheck one first.`, 'warn');
+            return;
+          }
+          list.push({ id, appliedTo:'' });
+        } else {
+          list = list.filter(k => k.id !== id);
+        }
+        writeKnown(list);
+        row.classList.toggle('checked', checkbox.checked);
+        renderSummary();
+      });
+      appliedInput.addEventListener('input', ()=>{
+        const list = readKnown();
+        const entry = list.find(k => k.id === id);
+        if(entry){ entry.appliedTo = appliedInput.value; writeKnown(list); }
+      });
+    });
+  }
+
+  function refreshInfusions(){
+    renderSummary();
+    renderList();
+  }
+
+  function openInfusions(){
+    refreshInfusions();
+    document.getElementById('infusionsOverlay').style.display = 'flex';
+  }
+  function closeInfusions(){
+    document.getElementById('infusionsOverlay').style.display = 'none';
+  }
+
+  function init(){
+    const openBtn = document.getElementById('btnOpenInfusions');
+    const closeBtn = document.getElementById('btnCloseInfusions');
+    const overlay = document.getElementById('infusionsOverlay');
+    if(openBtn) openBtn.addEventListener('click', openInfusions);
+    if(closeBtn) closeBtn.addEventListener('click', closeInfusions);
+    if(overlay) overlay.addEventListener('click', (e)=>{ if(e.target===overlay) closeInfusions(); });
+    document.addEventListener('keydown', (e)=>{ if(e.key==='Escape') closeInfusions(); });
+
+    // Load File doesn't fire input/change events on restored fields, so
+    // re-render shortly after a file is chosen to pick up loaded infusions.
+    const fileInput = document.getElementById('fileInput');
+    if(fileInput) fileInput.addEventListener('change', ()=> setTimeout(refreshInfusions, 400));
+  }
+
+  if(document.readyState === 'loading'){
+    document.addEventListener('DOMContentLoaded', init);
+  } else {
+    init();
+  }
+
+})();
