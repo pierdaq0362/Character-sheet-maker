@@ -5,7 +5,7 @@
 // Self-contained: doesn't touch js/app.js.
 // ============================================================================
 
-const DM_PASSWORD = "dm"; // change this to whatever you want
+const DM_PASSWORD = "16112000"; // change this to whatever you want
 
 const MONSTER_LIBRARY = {
   goblin: {
