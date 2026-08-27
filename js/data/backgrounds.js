@@ -27,5 +27,45 @@ const BACKGROUNDS = {
       4: ['Freedom of Movement','Polymorph'],
       5: ['Creation']
     }
+  },
+  soldier: {
+    name: 'Soldier',
+    skills: ['athletics','intimidation'],
+    numLanguages: 0,
+    equipment: "An insignia of rank, a trophy from a fallen enemy, a set of bone dice or deck of cards, a set of common clothes, and a belt pouch containing 10 gp. Also proficient with vehicles (land) and gaming sets (one type of your choice).",
+    startingGp: 10,
+    features: [
+      "Military Rank: Soldiers loyal to your former organization still recognize your authority and influence; you can invoke your rank to requisition simple gear or horses for a short time."
+    ]
+  },
+  sage: {
+    name: 'Sage',
+    skills: ['arcana','history'],
+    numLanguages: 2,
+    equipment: "A bottle of black ink, a quill, a small knife, a letter from a dead colleague posing a question you haven't yet solved, a set of common clothes, and a belt pouch containing 10 gp.",
+    startingGp: 10,
+    features: [
+      "Researcher: When you don't know a piece of lore, you often know where and from whom you can obtain it — usually a library, scriptorium, university, or a sage or other learned person or creature."
+    ]
+  },
+  criminal: {
+    name: 'Criminal',
+    skills: ['deception','stealth'],
+    numLanguages: 0,
+    equipment: "A crowbar, a set of dark common clothes including a hood, and a belt pouch containing 15 gp. Also proficient with one type of gaming set and thieves' tools.",
+    startingGp: 15,
+    features: [
+      "Criminal Contact: You have a reliable and trustworthy contact who acts as your liaison to a network of other criminals; you know how to get messages to and from them, even across great distances."
+    ]
+  },
+  folkHero: {
+    name: 'Folk Hero',
+    skills: ['animalHandling','survival'],
+    numLanguages: 0,
+    equipment: "A set of artisan's tools (one of your choice), a shovel, an iron pot, a set of common clothes, and a belt pouch containing 10 gp. Also proficient with one type of artisan's tools and land vehicles.",
+    startingGp: 10,
+    features: [
+      "Rustic Hospitality: Since you come from the ranks of the common folk, you fit in among them with ease; common folk will shield you from the law or anyone else searching for you, though they won't risk their lives for you."
+    ]
   }
 };
