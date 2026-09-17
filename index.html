@@ -121,6 +121,24 @@
     gap:18px;
     flex-wrap:wrap;
   }
+  .banner-top{display:flex; gap:16px; align-items:flex-start; flex-wrap:wrap;}
+  .banner-top-fields{flex:1 1 320px; min-width:0;}
+  .profile-pic-box{
+    position:relative; flex:0 0 auto;
+    width:84px; height:84px; border-radius:8px;
+    border:2px solid var(--gold); background:var(--parchment-dark);
+    display:flex; align-items:center; justify-content:center;
+    cursor:pointer; overflow:hidden;
+  }
+  .profile-pic-box img{width:100%; height:100%; object-fit:cover;}
+  .profile-pic-placeholder{
+    font-size:10.5px; text-align:center; line-height:1.5; color:var(--ink-soft);
+  }
+  .profile-pic-remove{
+    position:absolute; top:2px; right:2px; border:none; background:rgba(20,16,10,0.65);
+    color:#fff; border-radius:4px; font-size:11px; padding:1px 5px; cursor:pointer; line-height:1.4;
+  }
+  .profile-pic-remove:hover{background:var(--burgundy);}
   input.char-name{
     font-family:'Cinzel', serif;
     font-weight:700;
@@ -861,17 +879,28 @@
 <div id="sheet">
 
   <div class="banner">
-    <div class="namerow">
-      <input class="char-name" name="charName" placeholder="Character Name">
-      <label class="inspiration"><input type="checkbox" name="inspiration"> Inspiration</label>
-    </div>
-    <div class="metarow">
-      <div class="meta-field"><label>Class &amp; Level</label><input name="classLevel" placeholder="Ranger 5"></div>
-      <div class="meta-field"><label>Background</label><input name="background" placeholder="Outlander"></div>
-      <div class="meta-field"><label>Race / Species</label><input name="race" placeholder="Half-Elf"></div>
-      <div class="meta-field"><label>Alignment</label><input name="alignment" placeholder="Neutral Good"></div>
-      <div class="meta-field"><label>Player Name</label><input name="playerName" placeholder=""></div>
-      <div class="meta-field"><label>Experience</label><input name="xp" placeholder="0"></div>
+    <div class="banner-top">
+      <div id="profilePicBox" class="profile-pic-box">
+        <img id="profilePicImg" style="display:none;">
+        <span id="profilePicPlaceholder" class="profile-pic-placeholder">📷<br>Add Photo</span>
+        <button type="button" id="btnRemoveProfilePic" class="profile-pic-remove" style="display:none;" title="Remove photo">✕</button>
+      </div>
+      <input type="file" id="profilePicInput" accept="image/*" style="display:none;">
+      <input type="hidden" name="profilePicture" id="profilePictureField" value="">
+      <div class="banner-top-fields">
+        <div class="namerow">
+          <input class="char-name" name="charName" placeholder="Character Name">
+          <label class="inspiration"><input type="checkbox" name="inspiration"> Inspiration</label>
+        </div>
+        <div class="metarow">
+          <div class="meta-field"><label>Class &amp; Level</label><input name="classLevel" placeholder="Ranger 5"></div>
+          <div class="meta-field"><label>Background</label><input name="background" placeholder="Outlander"></div>
+          <div class="meta-field"><label>Race / Species</label><input name="race" placeholder="Half-Elf"></div>
+          <div class="meta-field"><label>Alignment</label><input name="alignment" placeholder="Neutral Good"></div>
+          <div class="meta-field"><label>Player Name</label><input name="playerName" placeholder=""></div>
+          <div class="meta-field"><label>Experience</label><input name="xp" placeholder="0"></div>
+        </div>
+      </div>
     </div>
   </div>
 
@@ -1255,6 +1284,7 @@
 <script src="js/data/backgrounds.js"></script>
 <script src="js/data/summons.js"></script>
 <script src="js/data/dmmode.js"></script>
+<script src="js/data/profilepic.js"></script>
 <script src="js/app.js"></script>
 </body>
 </html>
