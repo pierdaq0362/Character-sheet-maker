@@ -59,6 +59,33 @@ const SUBCLASSES = {
     bonusActions: [
       {name:"Command Steel Defender", minLevel:3, limited:false}
     ]
+  },
+  'The Fiend': {
+    features: [
+      {lvl:1, text:"Dark One's Blessing: When you reduce a hostile creature to 0 HP, gain temporary HP equal to your Cha modifier + warlock level (min 1)."},
+      {lvl:6, text:"Dark One's Own Luck: Once per short/long rest, add a d10 to an ability check or saving throw."},
+      {lvl:10, text:"Fiendish Resilience: Choose a damage type at the start of your turn; resist it until you choose again (can't pick the same type twice in a row)."},
+      {lvl:14, text:"Hurl Through Hell: Once per long rest, on a hit, banish the target to the Lower Planes for a moment — it takes 10d10 psychic damage and, unless it's from that plane, is frightened until the end of your next turn."},
+      {lvl:1, text:"Expanded Spell List adds: Burning Hands, Command, Blindness/Deafness, Scorching Ray, Fireball, Stinking Cloud, Fire Shield, Wall of Fire, Flame Strike, Hallow."}
+    ]
+  },
+  'The Archfey': {
+    features: [
+      {lvl:1, text:"Fey Presence: Once per short/long rest, as an action, each creature in a 10-ft. cube around you must save (Wis, your DC) or be charmed or frightened by you until the end of your next turn."},
+      {lvl:6, text:"Misty Escape: When you take damage, teleport up to 60 ft. as a reaction and turn invisible until the start of your next turn (once per short/long rest)."},
+      {lvl:10, text:"Beguiling Defenses: Immune to being charmed; if a creature tries to charm you, it can be charmed by you instead (Wis save)."},
+      {lvl:14, text:"Dark Delirium: Once per long rest (or with a spell slot), a charmed/frightened creature within 60 ft. perceives itself lost in a hallucinatory dark realm — it's incapacitated and takes no damage besides psychic."},
+      {lvl:1, text:"Expanded Spell List adds: Faerie Fire, Sleep, Calm Emotions, Phantasmal Force, Blink, Plant Growth, Dominate Beast, Greater Invisibility, Dominate Person, Seeming."}
+    ]
+  },
+  'The Great Old One': {
+    features: [
+      {lvl:1, text:"Awakened Mind: Telepathically communicate with any creature within 30 ft. that can understand a language."},
+      {lvl:6, text:"Entropic Ward: Once per short/long rest, impose disadvantage on an incoming attack as a reaction; if it misses, your next attack roll has advantage."},
+      {lvl:10, text:"Thought Shield: Resistance to psychic damage; if a creature deals psychic damage to you or reads your thoughts, it takes the same amount of psychic damage back."},
+      {lvl:14, text:"Create Thrall: Touch an incapacitated humanoid to charm it permanently (telepathic link while charmed)."},
+      {lvl:1, text:"Expanded Spell List adds: Dissonant Whispers, Tasha's Hideous Laughter, Detect Thoughts, Phantasmal Force, Clairvoyance, Sending, Confusion, Black Tentacles, Dream, Telekinesis."}
+    ]
   }
 };
 
@@ -73,6 +100,7 @@ const CLASSES = {
     skillChoice: {options:['Arcana','History','Investigation','Medicine','Nature','Perception','Sleight of Hand'], count:2, label:'Artificer skill choices'},
     spellAbility: 'int',
     subclassLevel: 3,
+    subclassLabel: 'Artificer Specialist (Subclass)',
     subclassOptions: ['Alchemist','Armorer','Artillerist','Battle Smith'],
     subclasses: SUBCLASSES,
     startingGoldFormula: '5d4 × 10 gp',
@@ -137,10 +165,14 @@ const CLASSES = {
     skillChoice: {options:['Arcana','Deception','History','Intimidation','Investigation','Nature','Religion'], count:2, label:'Warlock skill choices'},
     spellAbility: 'cha',
     pactMagic: true,
+    subclassLevel: 1,
+    subclassLabel: 'Otherworldly Patron (Subclass)',
+    subclassOptions: ['The Fiend','The Archfey','The Great Old One'],
+    subclasses: SUBCLASSES,
     startingGoldFormula: '4d4 × 10 gp',
     startingGoldAverage: 100,
     features: [
-      {lvl:1, text:"Otherworldly Patron: Choose a patron (Fiend, Archfey, Great Old One, etc.) — this simplified sheet doesn't track patron-specific expanded spells/features, so note your choice and add its bonuses by hand."},
+      {lvl:1, text:"Otherworldly Patron: pick one in the Choices panel below."},
       {lvl:1, text:"Pact Magic: Charisma-based. All your spell slots are the same level (shown in the slots table) and recharge on a Short Rest, not a Long Rest."},
       {lvl:2, text:"Eldritch Invocations: Learn magical enhancements to your power; number and options grow with level."},
       {lvl:3, text:"Pact Boon: Choose Pact of the Chain (familiar), Pact of the Blade (summon a pact weapon), or Pact of the Tome (a Book of Shadows with extra cantrips)."},
