@@ -707,14 +707,16 @@ function regenerateAutoText(){
     if(subKey && cls.subclasses && cls.subclasses[subKey]){
       const sub = cls.subclasses[subKey];
       featureLines.push(`SUBCLASS — ${subKey}`);
-      featureLines.push(`Tool proficiency: ${sub.tool}`);
+      if(sub.tool) featureLines.push(`Tool proficiency: ${sub.tool}`);
       sub.features.filter(f=>f.lvl<=level).forEach(f=>featureLines.push(`• (Lvl ${f.lvl}) ${f.text}`));
-      const bonusSoFar = [];
-      Object.keys(sub.bonusSpells).forEach(lvlStr=>{
-        const lvl = parseInt(lvlStr,10);
-        if(lvl<=level) bonusSoFar.push(`Lvl ${lvl}: ${sub.bonusSpells[lvl].join(', ')}`);
-      });
-      if(bonusSoFar.length) featureLines.push(`Always-prepared bonus spells — ${bonusSoFar.join('; ')} (auto-added to your Spells table).`);
+      if(sub.bonusSpells){
+        const bonusSoFar = [];
+        Object.keys(sub.bonusSpells).forEach(lvlStr=>{
+          const lvl = parseInt(lvlStr,10);
+          if(lvl<=level) bonusSoFar.push(`Lvl ${lvl}: ${sub.bonusSpells[lvl].join(', ')}`);
+        });
+        if(bonusSoFar.length) featureLines.push(`Always-prepared bonus spells — ${bonusSoFar.join('; ')} (auto-added to your Spells table).`);
+      }
       featureLines.push('');
     }
   }
@@ -744,7 +746,7 @@ function regenerateAutoText(){
     const bgLangs = [];
     if(bg) for(let i=0;i<bg.numLanguages;i++) bgLangs.push(val(`choice_lang_bg_${i}`) || '(not yet chosen)');
     const subKey2 = (cls.subclassLevel && level >= cls.subclassLevel) ? val('choice_subclass') : null;
-    const subTool = (subKey2 && cls.subclasses && cls.subclasses[subKey2]) ? `, ${cls.subclasses[subKey2].tool} (subclass)` : '';
+    const subTool = (subKey2 && cls.subclasses && cls.subclasses[subKey2] && cls.subclasses[subKey2].tool) ? `, ${cls.subclasses[subKey2].tool} (subclass)` : '';
     setAutoBlock(profsTa, [
       `Armor: ${cls.armor}`,
       `Weapons: ${cls.weapons}`,
@@ -762,7 +764,7 @@ function syncSubclassBonusSpells(){
   if(ACTIVE.cls && ACTIVE.cls.subclasses){
     const subKey = document.querySelector('[name="choice_subclass"]');
     const sub = (subKey && subKey.value) ? ACTIVE.cls.subclasses[subKey.value] : null;
-    if(sub){
+    if(sub && sub.bonusSpells){
       Object.keys(sub.bonusSpells).forEach(lvlStr=>{
         const lvl = parseInt(lvlStr,10);
         if(lvl <= ACTIVE.level) sub.bonusSpells[lvl].forEach(name=>newSet.add(name));
@@ -1127,10 +1129,14 @@ function renderChoicesPanel(race, cls, bg, level){
     html += `</div>`;
 
     if(cls.subclassLevel && level >= cls.subclassLevel){
-      html += `<div class="choice-group"><div class="choice-group-title">${cls.name} Specialist (Subclass)</div>
+      html += `<div class="choice-group"><div class="choice-group-title">${cls.subclassLabel || (cls.name + ' Subclass')}</div>
         <div class="choice-row">${buildSelect('choice_subclass', cls.subclassOptions, null, n=>{
           const sub = cls.subclasses && cls.subclasses[n];
-          return sub ? `Tool: ${sub.tool}. Grants bonus always-prepared spells at levels 3/5/9/13/17.` : '';
+          if(!sub) return '';
+          const parts = [];
+          if(sub.tool) parts.push(`Tool: ${sub.tool}.`);
+          if(sub.bonusSpells) parts.push('Grants bonus spells at higher levels.');
+          return parts.join(' ') || 'See its features once confirmed.';
         })}</div></div>`;
     }
   }
