@@ -516,6 +516,22 @@
   }
   .infusion-item.checked .if-applied{display:block;}
   .infusions-limit-warning{color:var(--burgundy); font-size:12px; margin-top:4px;}
+
+  .tinker-add-form{
+    display:flex; flex-direction:column; gap:6px; margin-bottom:14px;
+    padding-bottom:12px; border-bottom:1px solid var(--line);
+  }
+  .tinker-add-form input, .tinker-add-form select{width:100%;}
+  .tinker-item{
+    background:#fffaf0; border:1px solid var(--line); border-radius:7px;
+    padding:8px 10px; margin-bottom:7px;
+  }
+  .tinker-item .ti-head{display:flex; align-items:center; gap:8px;}
+  .tinker-item .ti-name{font-weight:700; font-size:13px; flex:1 1 auto;}
+  .tinker-item .ti-type{font-size:10.5px; color:var(--ink-soft); font-family:'JetBrains Mono',monospace;}
+  .tinker-item .ti-detail{font-size:12px; color:var(--ink-soft); margin-top:3px;}
+  .tinker-item .ti-end{border:none; background:none; color:var(--ink-soft); cursor:pointer; font-size:12px;}
+  .tinker-item .ti-end:hover{color:var(--burgundy);}
   .new-since-banner{
     background:#fff7e6;
     border:1px solid var(--gold);
@@ -1096,6 +1112,30 @@
     </aside>
   </div>
 
+  <div id="tinkeringOverlay" class="spellbook-overlay" style="display:none;">
+    <aside class="spellbook-drawer">
+      <div class="spellbook-header">
+        <h3>🔮 Magical Tinkering</h3>
+        <button type="button" id="btnCloseTinkering" class="spell-modal-close" aria-label="Close">✕</button>
+      </div>
+      <div id="tinkeringSummary" class="spellbook-slots"></div>
+      <div class="spellbook-list">
+        <div class="tinker-add-form">
+          <input type="text" id="tinkerObjectName" class="plain-input" placeholder="Object touched (e.g. a coin, a button)">
+          <select id="tinkerPropertyType" class="plain-input">
+            <option value="light">Light — sheds light 5 ft bright / 5 ft dim</option>
+            <option value="message">Message — plays a recorded message (≤6 sec) when tapped</option>
+            <option value="sound">Sound or Odor — continuous, audible/noticeable 10 ft</option>
+            <option value="mark">Visual Mark — a picture, ≤25 words, or shapes on its surface</option>
+          </select>
+          <input type="text" id="tinkerDetail" class="plain-input" placeholder="Detail (the message text / the odor or sound / what the mark shows)">
+          <button type="button" class="btn small" id="btnAddTinkered">+ Imbue Object</button>
+        </div>
+        <div id="tinkeringList"></div>
+      </div>
+    </aside>
+  </div>
+
   <div class="grid">
 
     <!-- LEFT COLUMN: abilities -->
@@ -1192,6 +1232,7 @@
       <div class="card">
         <h2>Equipment
           <button type="button" class="btn small" id="btnOpenInfusions" style="margin-left:auto; align-self:center;">🔧 Infusions</button>
+          <button type="button" class="btn small" id="btnOpenTinkering" style="align-self:center;">🔮 Tinkering</button>
         </h2>
         <div class="currency-row">
           <div class="cur"><label>CP</label><input name="cp" class="mono"></div>
@@ -1268,6 +1309,7 @@
 
   <input type="hidden" name="activeSummons" id="activeSummonsField" value="">
   <input type="hidden" name="knownInfusions" id="knownInfusionsField" value="">
+  <input type="hidden" name="magicalTinkering" id="magicalTinkeringField" value="">
 </div>
 
 <footer class="hint">
