@@ -106,7 +106,7 @@ const CLASSES = {
     startingGoldFormula: '5d4 × 10 gp',
     startingGoldAverage: 125,
     features: [
-      {lvl:1, text:"Magical Tinkering: As an action, touch a Tiny nonmagical object and give it a minor magical property (light, sound, sensor message, or the appearance of a mystical mark)."},
+      {lvl:1, text:"Magical Tinkering: Touch a Tiny nonmagical object and give it a minor magical property. Use the 🔮 Tinkering panel (Equipment section) to add and track them (capped at your proficiency bonus active at once)."},
       {lvl:1, text:"Spellcasting: Intelligence-based, prepared caster. Requires thieves'/artisan's tools in hand to cast."},
       {lvl:2, text:"Infuse Item: Learn 4 infusions, can have 2 infused items at once (after a long rest). Use the 🔧 Infusions panel (Equipment section) to pick and track them."},
       {lvl:6, text:"Infuse Item: now know 6 infusions, up to 3 infused items at once."},
@@ -359,6 +359,146 @@ const INFUSION_PROGRESSION = [
     // re-render shortly after a file is chosen to pick up loaded infusions.
     const fileInput = document.getElementById('fileInput');
     if(fileInput) fileInput.addEventListener('change', ()=> setTimeout(refreshInfusions, 400));
+  }
+
+  if(document.readyState === 'loading'){
+    document.addEventListener('DOMContentLoaded', init);
+  } else {
+    init();
+  }
+
+})();
+
+// ============================================================================
+// Magical Tinkering (Artificer, level 1) — a proper add/track/end panel
+// instead of a single line of feature text. Self-contained: doesn't touch
+// js/app.js. Persists via the sheet's existing generic [name]-field
+// save/load, same pattern as the Infusions panel above.
+// ============================================================================
+
+const TINKER_PROPERTIES = {
+  light: { label:'Light', text:'Sheds bright light in a 5-ft. radius and dim light for an additional 5 ft.' },
+  message: { label:'Message', text:'Emits a recorded message (up to 6 seconds long), audible up to 10 ft. away, when tapped by a creature.' },
+  sound: { label:'Sound or Odor', text:'Continuously emits a chosen odor or nonverbal sound, perceivable up to 10 ft. away.' },
+  mark: { label:'Visual Mark', text:'A static visual effect appears on its surface — a picture, up to 25 words of text, lines and shapes, or a mix.' }
+};
+
+(function(){
+
+  function tinkerCap(){
+    const classLevelField = document.querySelector('[name="classLevel"]');
+    const text = classLevelField ? classLevelField.value : '';
+    const isArtificer = /artificer/i.test(text);
+    let pb = 2;
+    try { pb = profBonusFor(text); } catch(e){}
+    return { isArtificer, cap: pb };
+  }
+
+  function readTinkered(){
+    const field = document.getElementById('magicalTinkeringField');
+    if(!field || !field.value) return [];
+    try { const arr = JSON.parse(field.value); return Array.isArray(arr) ? arr : []; } catch(e){ return []; }
+  }
+  function writeTinkered(list){
+    const field = document.getElementById('magicalTinkeringField');
+    if(field) field.value = JSON.stringify(list);
+  }
+
+  function renderSummary(){
+    const el = document.getElementById('tinkeringSummary');
+    if(!el) return;
+    const { isArtificer, cap } = tinkerCap();
+    const active = readTinkered().length;
+    const text = isArtificer
+      ? `Active properties: ${active} / ${cap} (your proficiency bonus) — imbuing a new one over the cap isn't allowed by the rules.`
+      : `Class field doesn't say "Artificer" — showing this with no cap enforced.`;
+    el.innerHTML = `<span style="font-size:12px;">${text}</span>`;
+  }
+
+  function renderList(){
+    const container = document.getElementById('tinkeringList');
+    if(!container) return;
+    const list = readTinkered();
+    if(!list.length){
+      container.innerHTML = `<div class="spellbook-empty">Nothing imbued yet — touch an object above to give it a property.</div>`;
+      return;
+    }
+    container.innerHTML = list.map(item=>{
+      const prop = TINKER_PROPERTIES[item.propertyType];
+      return `<div class="tinker-item" data-id="${item.id}">
+        <div class="ti-head">
+          <span class="ti-name">${item.objectName || '(unnamed object)'}</span>
+          <span class="ti-type">${prop ? prop.label : item.propertyType}</span>
+          <button type="button" class="ti-end">End</button>
+        </div>
+        <div class="ti-detail">${prop ? prop.text : ''}${item.detail ? ` — ${item.detail}` : ''}</div>
+      </div>`;
+    }).join('');
+    container.querySelectorAll('.ti-end').forEach(btn=>{
+      btn.addEventListener('click', ()=>{
+        const id = btn.closest('.tinker-item').dataset.id;
+        writeTinkered(readTinkered().filter(i => i.id !== id));
+        refreshTinkering();
+      });
+    });
+  }
+
+  function refreshTinkering(){
+    renderSummary();
+    renderList();
+  }
+
+  function addTinkered(){
+    const nameEl = document.getElementById('tinkerObjectName');
+    const typeEl = document.getElementById('tinkerPropertyType');
+    const detailEl = document.getElementById('tinkerDetail');
+    const { isArtificer, cap } = tinkerCap();
+    const list = readTinkered();
+
+    if(isArtificer && list.length >= cap){
+      if(typeof showToast === 'function') showToast(`You can't maintain more than ${cap} tinkered properties at once (your proficiency bonus). End one first.`, 'warn');
+      return;
+    }
+    if(!nameEl.value.trim()){
+      if(typeof showToast === 'function') showToast('Name the object you\'re touching first.', 'warn');
+      return;
+    }
+    list.push({
+      id: `tinker_${Date.now()}_${Math.random().toString(36).slice(2,6)}`,
+      objectName: nameEl.value.trim(),
+      propertyType: typeEl.value,
+      detail: detailEl.value.trim()
+    });
+    writeTinkered(list);
+    nameEl.value = '';
+    detailEl.value = '';
+    refreshTinkering();
+    if(typeof showToast === 'function') showToast('Object imbued.');
+  }
+
+  function openTinkering(){
+    refreshTinkering();
+    document.getElementById('tinkeringOverlay').style.display = 'flex';
+  }
+  function closeTinkering(){
+    document.getElementById('tinkeringOverlay').style.display = 'none';
+  }
+
+  function init(){
+    const openBtn = document.getElementById('btnOpenTinkering');
+    const closeBtn = document.getElementById('btnCloseTinkering');
+    const overlay = document.getElementById('tinkeringOverlay');
+    const addBtn = document.getElementById('btnAddTinkered');
+    if(openBtn) openBtn.addEventListener('click', openTinkering);
+    if(closeBtn) closeBtn.addEventListener('click', closeTinkering);
+    if(overlay) overlay.addEventListener('click', (e)=>{ if(e.target===overlay) closeTinkering(); });
+    if(addBtn) addBtn.addEventListener('click', addTinkered);
+    document.addEventListener('keydown', (e)=>{ if(e.key==='Escape') closeTinkering(); });
+
+    // Load File doesn't fire input/change events on restored fields, so
+    // re-render shortly after a file is chosen to pick up loaded objects.
+    const fileInput = document.getElementById('fileInput');
+    if(fileInput) fileInput.addEventListener('change', ()=> setTimeout(refreshTinkering, 400));
   }
 
   if(document.readyState === 'loading'){
