@@ -209,6 +209,45 @@ const CLASSES = {
       19:{cantrips:4, slots:{5:4}},
       20:{cantrips:4, slots:{5:4}}
     }
+  },
+  barbarian: {
+    name: 'Barbarian',
+    hitDie: 12,
+    saves: ['str','con'],
+    armor: 'Light armor, medium armor, shields',
+    weapons: 'Simple weapons, martial weapons',
+    tools: 'None',
+    skillChoice: {options:['Animal Handling','Athletics','Intimidation','Nature','Perception'], count:2, label:'Barbarian skill choices'},
+    spellAbility: '',
+    startingGoldFormula: '2d4 × 10 gp',
+    startingGoldAverage: 50,
+    features: [
+      {lvl:1, text:"Rage: Bonus action to enter a rage (10 rounds) — advantage on Str checks/saves, bonus melee Str-weapon damage (+2), resistance to bludgeoning/piercing/slashing. 2 rages per long rest at this level."},
+      {lvl:1, text:"Unarmored Defense: While not wearing armor, AC = 10 + Dex mod + Con mod (a shield can still be used)."},
+      {lvl:2, text:"Reckless Attack: Advantage on Str-based melee attack rolls this turn, but attacks against you have advantage until your next turn."},
+      {lvl:2, text:"Danger Sense: Advantage on Dex saves against effects you can see (not blinded, deafened, incapacitated)."},
+      {lvl:3, text:"Primal Path: Choose a subclass (Berserker, Totem Warrior, etc.) — not tracked separately on this sheet yet; note your choice and add its features by hand."},
+      {lvl:4, text:"Ability Score Improvement.", asi:true},
+      {lvl:5, text:"Extra Attack: Attack twice, rather than once, when you take the Attack action."},
+      {lvl:5, text:"Fast Movement: +10 ft. speed while not wearing heavy armor."},
+      {lvl:7, text:"Feral Instinct: Advantage on initiative; can act normally on a surprised first turn if you enter a rage first."},
+      {lvl:8, text:"Ability Score Improvement.", asi:true},
+      {lvl:9, text:"Brutal Critical: Roll one extra weapon damage die on a critical hit."},
+      {lvl:9, text:"Rage damage bonus increases to +3; 4 rages per long rest from level 6, 5 from level 12."},
+      {lvl:11, text:"Relentless Rage: On dropping to 0 HP while raging (and not killed outright), make a DC 10 Con save (+5 per prior use since last rest) to drop to 1 HP instead."},
+      {lvl:12, text:"Ability Score Improvement.", asi:true},
+      {lvl:13, text:"Brutal Critical: now 2 extra weapon damage dice on a critical hit."},
+      {lvl:15, text:"Persistent Rage: Your rage only ends early if you fall unconscious or choose to end it."},
+      {lvl:16, text:"Ability Score Improvement.", asi:true},
+      {lvl:17, text:"Brutal Critical: now 3 extra weapon damage dice on a critical hit."},
+      {lvl:17, text:"Rage damage bonus increases to +4; 6 rages per long rest from level 17."},
+      {lvl:18, text:"Indomitable Might: If your Str check total is less than your Str score, use your Str score instead."},
+      {lvl:19, text:"Ability Score Improvement.", asi:true},
+      {lvl:20, text:"Primal Champion: Str and Con each increase by 4 (max 24); unlimited rages per long rest."}
+    ],
+    // Barbarian isn't a spellcaster — every level still needs an entry here
+    // because js/app.js reads cls.slots[level] unconditionally.
+    slots: Object.fromEntries(Array.from({length:20}, (_, i) => [i+1, {cantrips:0, slots:{}}]))
   }
 };
 
@@ -499,6 +538,54 @@ const TINKER_PROPERTIES = {
     // re-render shortly after a file is chosen to pick up loaded objects.
     const fileInput = document.getElementById('fileInput');
     if(fileInput) fileInput.addEventListener('change', ()=> setTimeout(refreshTinkering, 400));
+  }
+
+  if(document.readyState === 'loading'){
+    document.addEventListener('DOMContentLoaded', init);
+  } else {
+    init();
+  }
+
+})();
+
+// ============================================================================
+// Show the Infusions / Tinkering buttons only for Artificer characters.
+// Self-contained: doesn't touch js/app.js.
+// ============================================================================
+
+(function(){
+
+  function isArtificer(){
+    const el = document.querySelector('[name="classLevel"]');
+    return !!(el && /artificer/i.test(el.value));
+  }
+
+  function updateVisibility(){
+    const show = isArtificer();
+    const infBtn = document.getElementById('btnOpenInfusions');
+    const tinkBtn = document.getElementById('btnOpenTinkering');
+    if(infBtn) infBtn.style.display = show ? '' : 'none';
+    if(tinkBtn) tinkBtn.style.display = show ? '' : 'none';
+  }
+
+  function init(){
+    updateVisibility();
+
+    const confirmBtn = document.getElementById('btnConfirmChoices');
+    if(confirmBtn) confirmBtn.addEventListener('click', updateVisibility);
+
+    const newBtn = document.getElementById('btnNew');
+    if(newBtn) newBtn.addEventListener('click', updateVisibility);
+
+    const classLevelField = document.querySelector('[name="classLevel"]');
+    if(classLevelField){
+      classLevelField.addEventListener('input', updateVisibility);
+      classLevelField.addEventListener('change', updateVisibility);
+    }
+
+    // Load File doesn't fire input/change events on restored fields.
+    const fileInput = document.getElementById('fileInput');
+    if(fileInput) fileInput.addEventListener('change', ()=> setTimeout(updateVisibility, 400));
   }
 
   if(document.readyState === 'loading'){
