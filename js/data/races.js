@@ -38,5 +38,18 @@ const RACES = {
       "Halfling Nimbleness: You can move through the space of any creature that is a size larger than you.",
       "Ability Score Increase: +2 Dexterity, +1 Constitution (already applied to your modifiers above)."
     ]
+  },
+  goliath: {
+    name: 'Goliath',
+    speed: '30 ft',
+    asi: {str:2, con:1},
+    numRacialLanguages: 1,
+    features: [
+      "Natural Athlete: Proficient in the Athletics skill.",
+      "Stone's Endurance: Once per short/long rest, react to reduce damage taken by 1d12 + your Constitution modifier.",
+      "Powerful Build: You count as one size larger when determining carrying capacity and the weight you can push, drag, or lift.",
+      "Mountain Born: You have resistance to cold damage, and you're acclimated to high altitude (including elevations above 20,000 feet).",
+      "Ability Score Increase: +2 Strength, +1 Constitution (already applied to your modifiers above)."
+    ]
   }
 };

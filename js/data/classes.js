@@ -248,6 +248,46 @@ const CLASSES = {
     // Barbarian isn't a spellcaster — every level still needs an entry here
     // because js/app.js reads cls.slots[level] unconditionally.
     slots: Object.fromEntries(Array.from({length:20}, (_, i) => [i+1, {cantrips:0, slots:{}}]))
+  },
+  fighter: {
+    name: 'Fighter',
+    hitDie: 10,
+    saves: ['str','con'],
+    armor: 'All armor, shields',
+    weapons: 'Simple weapons, martial weapons',
+    tools: 'None',
+    skillChoice: {options:['Acrobatics','Animal Handling','Athletics','History','Insight','Intimidation','Perception','Survival'], count:2, label:'Fighter skill choices'},
+    spellAbility: '',
+    startingGoldFormula: '5d4 × 10 gp',
+    startingGoldAverage: 125,
+    features: [
+      {lvl:1, text:"Fighting Style: Choose a fighting style feat (Archery, Defense, Dueling, Great Weapon Fighting, Protection, Two-Weapon Fighting, etc.) — note your choice by hand."},
+      {lvl:1, text:"Second Wind: Bonus action to regain 1d10 + fighter level HP. Once per short/long rest."},
+      {lvl:2, text:"Action Surge: Take one additional action on your turn. Once per short/long rest (twice per rest starting at 17th level)."},
+      {lvl:3, text:"Martial Archetype: Choose a subclass (Champion, Battle Master, Eldritch Knight, etc.) — not tracked separately on this sheet yet; note your choice and add its features by hand."},
+      {lvl:4, text:"Ability Score Improvement.", asi:true},
+      {lvl:5, text:"Extra Attack: Attack twice, rather than once, when you take the Attack action."},
+      {lvl:6, text:"Ability Score Improvement.", asi:true},
+      {lvl:7, text:"Martial Archetype feature."},
+      {lvl:8, text:"Ability Score Improvement.", asi:true},
+      {lvl:9, text:"Indomitable: Reroll a failed saving throw. Once per long rest."},
+      {lvl:10, text:"Martial Archetype feature."},
+      {lvl:11, text:"Extra Attack (2): Attack three times when you take the Attack action."},
+      {lvl:12, text:"Ability Score Improvement.", asi:true},
+      {lvl:13, text:"Indomitable: now usable twice per long rest."},
+      {lvl:14, text:"Ability Score Improvement.", asi:true},
+      {lvl:15, text:"Martial Archetype feature."},
+      {lvl:16, text:"Ability Score Improvement.", asi:true},
+      {lvl:17, text:"Action Surge: now usable twice per short/long rest (before a long rest is needed to use it again)."},
+      {lvl:17, text:"Indomitable: now usable three times per long rest."},
+      {lvl:18, text:"Martial Archetype feature."},
+      {lvl:19, text:"Ability Score Improvement.", asi:true},
+      {lvl:20, text:"Extra Attack (3): Attack four times when you take the Attack action."}
+    ],
+    // Fighter isn't a spellcaster by default (Eldritch Knight aside) — every
+    // level still needs an entry here because js/app.js reads
+    // cls.slots[level] unconditionally.
+    slots: Object.fromEntries(Array.from({length:20}, (_, i) => [i+1, {cantrips:0, slots:{}}]))
   }
 };
 
