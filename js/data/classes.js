@@ -606,6 +606,8 @@ const TINKER_PROPERTIES = {
     const tinkBtn = document.getElementById('btnOpenTinkering');
     if(infBtn) infBtn.style.display = show ? '' : 'none';
     if(tinkBtn) tinkBtn.style.display = show ? '' : 'none';
+    const craftBtn = document.getElementById('btnOpenCrafting');
+    if(craftBtn) craftBtn.style.display = show ? '' : 'none';
   }
 
   function init(){
@@ -633,5 +635,131 @@ const TINKER_PROPERTIES = {
   } else {
     init();
   }
+
+})();
+
+
+// ============================================================================
+// Artificer Item Crafting — d100 table by level. Edit CRAFT_ANCHORS to tune.
+// Levels between anchors are linearly interpolated. Persists via hidden
+// #itemCraftingField (generic save/load). Self-contained: doesn't touch app.js.
+// ============================================================================
+
+const CRAFT_RARITIES = ['Common','Uncommon','Rare','Very Rare','Legendary','Artifact'];
+const CRAFT_ANCHORS = {
+  1:  [60, 10, 1, 0, 0, 0],
+  10: [100, 50, 28, 12, 4, 0],
+  20: [100, 100, 80, 60, 45, 25]
+};
+
+function craftChances(level){
+  const keys = Object.keys(CRAFT_ANCHORS).map(Number).sort((a,b)=>a-b);
+  level = Math.max(1, Math.min(20, level));
+  let lo = keys[0], hi = keys[keys.length-1];
+  for(const k of keys){ if(k <= level) lo = k; }
+  for(const k of keys.slice().reverse()){ if(k >= level) hi = k; }
+  if(lo === hi) return CRAFT_ANCHORS[lo].slice();
+  const t = (level - lo) / (hi - lo);
+  return CRAFT_ANCHORS[lo].map((v,i)=> Math.round(v + (CRAFT_ANCHORS[hi][i]-v)*t));
+}
+
+(function(){
+
+  function readLevel(){
+    const el = document.querySelector('[name="classLevel"]');
+    const m = el && /(\d+)/.exec(el.value);
+    return m ? Math.max(1, Math.min(20, parseInt(m[1],10))) : 1;
+  }
+
+  function readLog(){
+    const f = document.getElementById('itemCraftingField');
+    try { return JSON.parse(f && f.value || '[]') || []; } catch(e){ return []; }
+  }
+  function writeLog(list){
+    const f = document.getElementById('itemCraftingField');
+    if(f) f.value = JSON.stringify(list);
+  }
+
+  function esc(s){ return String(s).replace(/[&<>"]/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
+
+  function renderTable(){
+    const lvl = readLevel();
+    let h = '<div class="table-scroll"><table class="craft-table"><thead><tr><th>Lvl</th>' +
+      CRAFT_RARITIES.map(r=>`<th>${r}</th>`).join('') + '</tr></thead><tbody>';
+    for(let l=1; l<=20; l++){
+      h += `<tr class="${l===lvl?'cur-level':''}"><td>${l}</td>` +
+        craftChances(l).map(v=>`<td>${v}%</td>`).join('') + '</tr>';
+    }
+    document.getElementById('craftTableWrap').innerHTML = h + '</tbody></table></div>';
+  }
+
+  function renderLog(){
+    const el = document.getElementById('craftLog');
+    const list = readLog();
+    if(!list.length){ el.innerHTML = ''; return; }
+    el.innerHTML = '<div style="font-weight:700; font-size:12px; margin-bottom:5px;">Crafting log</div>' +
+      list.map(i=>`<div class="craft-item" data-id="${i.id}">
+        <span class="ci-name">${esc(i.item)}</span>
+        <span class="ci-meta">d100: ${i.roll} · Lvl ${i.level} · ${esc(i.result)}</span>
+        <button type="button" class="ci-del" title="Remove">✕</button></div>`).join('');
+    el.querySelectorAll('.ci-del').forEach(b=> b.addEventListener('click', ()=>{
+      const id = b.closest('.craft-item').dataset.id;
+      writeLog(readLog().filter(i=>i.id!==id));
+      renderLog();
+    }));
+  }
+
+  function resolve(roll){
+    const lvl = readLevel();
+    const ch = craftChances(lvl);
+    let best = -1;
+    for(let i=0;i<ch.length;i++){ if(roll <= ch[i]) best = i; }
+    return { lvl, result: best < 0 ? 'Failure' : CRAFT_RARITIES[best] };
+  }
+
+  function doCraft(roll){
+    const nameEl = document.getElementById('craftItemName');
+    const item = nameEl.value.trim() || 'Unnamed item';
+    const { lvl, result } = resolve(roll);
+    const fail = result === 'Failure';
+    document.getElementById('craftResult').innerHTML =
+      `<div class="craft-result ${fail?'fail':''}"><b>${esc(item)}</b><br>Rolled <b>${roll}</b> at level ${lvl} → <b>${fail ? 'Failure — the crafting attempt fails.' : result + ' item created!'}</b></div>`;
+    const list = readLog();
+    list.unshift({ id:`craft_${Date.now()}_${Math.random().toString(36).slice(2,6)}`, item, roll, level:lvl, result });
+    writeLog(list);
+    renderLog();
+  }
+
+  function refresh(){ renderTable(); renderLog(); }
+  function open(){ refresh(); document.getElementById('craftingOverlay').style.display = 'flex'; }
+  function close(){ document.getElementById('craftingOverlay').style.display = 'none'; }
+
+  function init(){
+    const openBtn = document.getElementById('btnOpenCrafting');
+    const closeBtn = document.getElementById('btnCloseCrafting');
+    const overlay = document.getElementById('craftingOverlay');
+    if(openBtn) openBtn.addEventListener('click', open);
+    if(closeBtn) closeBtn.addEventListener('click', close);
+    if(overlay) overlay.addEventListener('click', e=>{ if(e.target===overlay) close(); });
+    document.addEventListener('keydown', e=>{ if(e.key==='Escape') close(); });
+    const rollBtn = document.getElementById('btnCraftRoll');
+    if(rollBtn) rollBtn.addEventListener('click', ()=> doCraft(Math.floor(Math.random()*100)+1));
+    const manBtn = document.getElementById('btnCraftManual');
+    if(manBtn) manBtn.addEventListener('click', ()=>{
+      const v = parseInt(document.getElementById('craftManualRoll').value, 10);
+      if(!(v>=1 && v<=100)){ if(typeof showToast==='function') showToast('Enter a roll from 1 to 100.','warn'); return; }
+      doCraft(v);
+    });
+    const fileInput = document.getElementById('fileInput');
+    if(fileInput) fileInput.addEventListener('change', ()=> setTimeout(refresh, 400));
+    const newBtn = document.getElementById('btnNew');
+    if(newBtn) newBtn.addEventListener('click', ()=>{
+      const n = document.querySelector('[name="charName"]');
+      if(n && n.value === ''){ writeLog([]); }
+    });
+  }
+
+  if(document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init);
+  else init();
 
 })();
