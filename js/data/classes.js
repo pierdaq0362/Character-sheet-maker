@@ -658,9 +658,26 @@ function craftChances(level){
   let lo = keys[0], hi = keys[keys.length-1];
   for(const k of keys){ if(k <= level) lo = k; }
   for(const k of keys.slice().reverse()){ if(k >= level) hi = k; }
-  if(lo === hi) return CRAFT_ANCHORS[lo].slice();
-  const t = (level - lo) / (hi - lo);
-  return CRAFT_ANCHORS[lo].map((v,i)=> Math.round(v + (CRAFT_ANCHORS[hi][i]-v)*t));
+  let out;
+  if(lo === hi) out = CRAFT_ANCHORS[lo].slice();
+  else {
+    const t = (level - lo) / (hi - lo);
+    out = CRAFT_ANCHORS[lo].map((v,i)=> Math.round(v + (CRAFT_ANCHORS[hi][i]-v)*t));
+  }
+  out[4] = craftLegendary(level); // Legendary column has its own curve
+  return out;
+}
+
+// Legendary chance: 0% below level 5, 1% at level 5, then interpolated.
+const CRAFT_LEGENDARY = { 5:1, 10:4, 20:45 };
+function craftLegendary(level){
+  const keys = Object.keys(CRAFT_LEGENDARY).map(Number).sort((a,b)=>a-b);
+  if(level < keys[0]) return 0;
+  let lo = keys[0], hi = keys[keys.length-1];
+  for(const k of keys){ if(k <= level) lo = k; }
+  for(const k of keys.slice().reverse()){ if(k >= level) hi = k; }
+  if(lo === hi) return CRAFT_LEGENDARY[lo];
+  return Math.round(CRAFT_LEGENDARY[lo] + (CRAFT_LEGENDARY[hi]-CRAFT_LEGENDARY[lo])*(level-lo)/(hi-lo));
 }
 
 (function(){
@@ -700,7 +717,7 @@ function craftChances(level){
     el.innerHTML = '<div style="font-weight:700; font-size:12px; margin-bottom:5px;">Crafting log</div>' +
       list.map(i=>`<div class="craft-item" data-id="${i.id}">
         <span class="ci-name">${esc(i.item)}</span>
-        <span class="ci-meta">d100: ${i.roll} · Lvl ${i.level} · ${esc(i.result)}</span>
+        <span class="ci-meta">d100: ${i.roll}${i.bonus!==undefined ? (i.bonus>=0?'+':'\u2212')+Math.abs(i.bonus)+'='+i.total : ''} · Lvl ${i.level} · ${esc(i.result)}</span>
         <button type="button" class="ci-del" title="Remove">✕</button></div>`).join('');
     el.querySelectorAll('.ci-del').forEach(b=> b.addEventListener('click', ()=>{
       const id = b.closest('.craft-item').dataset.id;
@@ -709,30 +726,40 @@ function craftChances(level){
     }));
   }
 
-  function resolve(roll){
-  const lvl = readLevel();
-  const ch = craftChances(lvl);
-  let best = -1;
-  if(roll === 100){
-    // natural 100: highest rarity that has any chance at this level
-    for(let i=0;i<ch.length;i++){ if(ch[i] > 0) best = i; }
-  } else if(roll > 1){
-    // roll high to succeed: a 60% chance means you need 41 or more
-    for(let i=0;i<ch.length;i++){ if(roll > 100 - ch[i]) best = i; }
+  function intMod(){
+    const el = document.querySelector('[data-mod="int"]');
+    const m = el && /-?\d+/.exec(el.textContent.replace('\u2212','-'));
+    return m ? parseInt(m[0],10) : 0;
   }
-  // roll of 1 falls through: best stays -1, so it's always a Failure
-  return { lvl, result: best < 0 ? 'Failure' : CRAFT_RARITIES[best] };
-}
+
+  function resolve(roll){
+    const lvl = readLevel();
+    const ch = craftChances(lvl);
+    const bonus = intMod();
+    const total = roll + bonus;
+    let best = -1;
+    if(roll === 100){
+      // natural 100: highest rarity that has any chance at this level
+      for(let i=0;i<ch.length;i++){ if(ch[i] > 0) best = i; }
+    } else if(roll > 1){
+      // roll high to succeed: a 60% chance means you need a total of 41 or more
+      for(let i=0;i<ch.length;i++){ if(total > 100 - ch[i]) best = i; }
+    }
+    // natural 1: best stays -1, so it's always a Failure
+    return { lvl, bonus, total, result: best < 0 ? 'Failure' : CRAFT_RARITIES[best] };
+  }
 
   function doCraft(roll){
     const nameEl = document.getElementById('craftItemName');
     const item = nameEl.value.trim() || 'Unnamed item';
-    const { lvl, result } = resolve(roll);
+    const { lvl, bonus, total, result } = resolve(roll);
     const fail = result === 'Failure';
+    const sign = bonus >= 0 ? '+' : '\u2212';
+    const math = `${roll} ${sign} ${Math.abs(bonus)} (Int) = <b>${total}</b>`;
     document.getElementById('craftResult').innerHTML =
-      `<div class="craft-result ${fail?'fail':''}"><b>${esc(item)}</b><br>Rolled <b>${roll}</b> at level ${lvl} → <b>${fail ? 'Failure — the crafting attempt fails.' : result + ' item created!'}</b></div>`;
+      `<div class="craft-result ${fail?'fail':''}"><b>${esc(item)}</b><br>Rolled ${math} at level ${lvl} \u2192 <b>${fail ? 'Failure \u2014 the crafting attempt fails.' : result + ' item created!'}</b></div>`;
     const list = readLog();
-    list.unshift({ id:`craft_${Date.now()}_${Math.random().toString(36).slice(2,6)}`, item, roll, level:lvl, result });
+    list.unshift({ id:`craft_${Date.now()}_${Math.random().toString(36).slice(2,6)}`, item, roll, bonus, total, level:lvl, result });
     writeLog(list);
     renderLog();
   }
