@@ -710,12 +710,19 @@ function craftChances(level){
   }
 
   function resolve(roll){
-    const lvl = readLevel();
-    const ch = craftChances(lvl);
-    let best = -1;
-    for(let i=0;i<ch.length;i++){ if(roll <= ch[i]) best = i; }
-    return { lvl, result: best < 0 ? 'Failure' : CRAFT_RARITIES[best] };
+  const lvl = readLevel();
+  const ch = craftChances(lvl);
+  let best = -1;
+  if(roll === 100){
+    // natural 100: highest rarity that has any chance at this level
+    for(let i=0;i<ch.length;i++){ if(ch[i] > 0) best = i; }
+  } else if(roll > 1){
+    // roll high to succeed: a 60% chance means you need 41 or more
+    for(let i=0;i<ch.length;i++){ if(roll > 100 - ch[i]) best = i; }
   }
+  // roll of 1 falls through: best stays -1, so it's always a Failure
+  return { lvl, result: best < 0 ? 'Failure' : CRAFT_RARITIES[best] };
+}
 
   function doCraft(roll){
     const nameEl = document.getElementById('craftItemName');
