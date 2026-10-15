@@ -718,7 +718,26 @@ function craftLegendary(level){
       list.map(i=>`<div class="craft-item" data-id="${i.id}">
         <span class="ci-name">${esc(i.item)}</span>
         <span class="ci-meta">d100: ${i.roll}${i.bonus!==undefined ? (i.bonus>=0?'+':'\u2212')+Math.abs(i.bonus)+'='+i.total : ''} · Lvl ${i.level} · ${esc(i.result)}</span>
+        ${i.result==='Failure' ? '' : (i.added
+          ? '<span class="ci-meta">✓ Added</span>'
+          : '<button type="button" class="btn small ci-add">+ Add to Equipment</button>')}
         <button type="button" class="ci-del" title="Remove">✕</button></div>`).join('');
+    el.querySelectorAll('.ci-add').forEach(b=> b.addEventListener('click', ()=>{
+      const id = b.closest('.craft-item').dataset.id;
+      const list = readLog();
+      const entry = list.find(i=>i.id===id);
+      if(!entry || entry.added) return;
+      const ta = document.querySelector('[name="equipment"]');
+      if(ta){
+        const line = `${entry.item} (${entry.result})`;
+        ta.value = ta.value ? `${ta.value}\n${line}` : line;
+        ta.dispatchEvent(new Event('input', { bubbles: true }));
+      }
+      entry.added = true;
+      writeLog(list);
+      renderLog();
+      if(typeof showToast === 'function') showToast(`${entry.item} added to Equipment.`);
+    }));
     el.querySelectorAll('.ci-del').forEach(b=> b.addEventListener('click', ()=>{
       const id = b.closest('.craft-item').dataset.id;
       writeLog(readLog().filter(i=>i.id!==id));
