@@ -532,6 +532,19 @@
   .tinker-item .ti-detail{font-size:12px; color:var(--ink-soft); margin-top:3px;}
   .tinker-item .ti-end{border:none; background:none; color:var(--ink-soft); cursor:pointer; font-size:12px;}
   .tinker-item .ti-end:hover{color:var(--burgundy);}
+  .craft-table{width:100%; border-collapse:collapse; font-size:11.5px; margin-bottom:12px;}
+  .craft-table th, .craft-table td{border:1px solid var(--line); padding:3px 4px; text-align:center;}
+  .craft-table th{background:#f3ead6; font-size:10px;}
+  .craft-table tr.cur-level td{background:#ffe9a8; font-weight:700;}
+  .craft-form{display:flex; flex-direction:column; gap:6px; margin-bottom:12px;}
+  .craft-form input{width:100%;}
+  .craft-form .craft-row{display:flex; gap:6px;}
+  .craft-result{border-radius:7px; padding:9px 11px; margin-bottom:10px; font-size:13px; border:1px solid var(--line); background:#fffaf0;}
+  .craft-result.fail{background:#f6e3e0; color:var(--burgundy);}
+  .craft-item{background:#fffaf0; border:1px solid var(--line); border-radius:7px; padding:6px 10px; margin-bottom:6px; font-size:12.5px; display:flex; gap:8px; align-items:center;}
+  .craft-item .ci-name{flex:1 1 auto; font-weight:700;}
+  .craft-item .ci-meta{font-family:'JetBrains Mono',monospace; font-size:10.5px; color:var(--ink-soft);}
+  .craft-item .ci-del{border:none; background:none; cursor:pointer; color:var(--ink-soft);}
   .new-since-banner{
     background:#fff7e6;
     border:1px solid var(--gold);
@@ -1139,6 +1152,29 @@
     </aside>
   </div>
 
+  <div id="craftingOverlay" class="spellbook-overlay" style="display:none;">
+    <aside class="spellbook-drawer">
+      <div class="spellbook-header">
+        <h3>⚒️ Item Crafting</h3>
+        <button type="button" id="btnCloseCrafting" class="spell-modal-close" aria-label="Close">✕</button>
+      </div>
+      <div class="spellbook-list">
+        <div class="craft-form">
+          <input type="text" id="craftItemName" class="plain-input" placeholder="Item you want to create (e.g. Cloak of Protection)">
+          <div class="craft-row">
+            <button type="button" class="btn small" id="btnCraftRoll">🎲 Roll d100</button>
+            <input type="number" id="craftManualRoll" class="plain-input" min="1" max="100" placeholder="or enter your own d100 roll">
+            <button type="button" class="btn small secondary" id="btnCraftManual">Use</button>
+          </div>
+        </div>
+        <div id="craftResult"></div>
+        <div id="craftTableWrap"></div>
+        <div style="font-size:11px; color:var(--ink-soft); margin-bottom:10px;">Roll d100: you succeed at a rarity if your roll is <b>equal to or under</b> its percentage. You get the highest rarity you qualify for; a roll above the Common % is a failure.</div>
+        <div id="craftLog"></div>
+      </div>
+    </aside>
+  </div>
+
   <div class="grid">
 
     <!-- LEFT COLUMN: abilities -->
@@ -1236,6 +1272,7 @@
         <h2>Equipment
           <button type="button" class="btn small" id="btnOpenInfusions" style="margin-left:auto; align-self:center; display:none;">🔧 Infusions</button>
           <button type="button" class="btn small" id="btnOpenTinkering" style="align-self:center; display:none;">🔮 Tinkering</button>
+          <button type="button" class="btn small" id="btnOpenCrafting" style="align-self:center; display:none;">⚒️ Crafting</button>
         </h2>
         <div class="currency-row">
           <div class="cur"><label>CP</label><input name="cp" class="mono"></div>
@@ -1313,6 +1350,7 @@
   <input type="hidden" name="activeSummons" id="activeSummonsField" value="">
   <input type="hidden" name="knownInfusions" id="knownInfusionsField" value="">
   <input type="hidden" name="magicalTinkering" id="magicalTinkeringField" value="">
+  <input type="hidden" name="itemCrafting" id="itemCraftingField" value="">
 </div>
 
 <footer class="hint">
