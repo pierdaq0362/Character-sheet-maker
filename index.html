@@ -1270,7 +1270,8 @@
 
       <div class="card">
         <h2>Equipment
-          <button type="button" class="btn small" id="btnOpenInfusions" style="margin-left:auto; align-self:center; display:none;">🔧 Infusions</button>
+          <button type="button" class="btn small" id="btnOpenInventory" style="margin-left:auto; align-self:center;">🎒 Inventory</button>
+          <button type="button" class="btn small" id="btnOpenInfusions" style="align-self:center; display:none;">🔧 Infusions</button>
           <button type="button" class="btn small" id="btnOpenTinkering" style="align-self:center; display:none;">🔮 Tinkering</button>
           <button type="button" class="btn small" id="btnOpenCrafting" style="align-self:center; display:none;">⚒️ Crafting</button>
         </h2>
@@ -1282,7 +1283,7 @@
           <div class="cur"><label>PP</label><input name="pp" class="mono"></div>
         </div>
         <div class="field">
-          <label>Inventory</label>
+          <label>Equipment notes</label>
           <textarea name="equipment" rows="7" placeholder="Weapons, armor, gear, treasure..."></textarea>
         </div>
       </div>
@@ -1351,6 +1352,7 @@
   <input type="hidden" name="knownInfusions" id="knownInfusionsField" value="">
   <input type="hidden" name="magicalTinkering" id="magicalTinkeringField" value="">
   <input type="hidden" name="itemCrafting" id="itemCraftingField" value="">
+  <input type="hidden" name="inventory" id="inventoryField" value="">
 </div>
 
 <footer class="hint">
@@ -1371,6 +1373,7 @@
 <script src="js/app.js"></script>
 <script src="js/data/dice.js"></script>
 <script src="js/data/levelup.js"></script>
+<script src="js/data/inventory.js"></script>
 <script src="js/data/autosave.js"></script>
 </body>
 </html>
