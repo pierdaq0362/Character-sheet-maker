@@ -324,12 +324,16 @@
         make:()=>({ name, cat: c==='c' ? 'consumable' : 'gear', weight:num(w), value:cost, stackable:true }) };
     });
     if(tab === 'magic'){
+      const custom = (typeof window.getMergedCustomMagic === 'function') ? window.getMergedCustomMagic()
+        : ((typeof CUSTOM_MAGIC_ITEMS !== 'undefined') ? CUSTOM_MAGIC_ITEMS : []);
+      const campaign = custom.map(c=>({ label:c.name, detail:[c.rarity, c.attune?'attunement':''].filter(Boolean).join(' · '), group:'✨ Campaign items (from your DM)',
+        make:()=>{ const p = JSON.parse(JSON.stringify(c)); delete p.id; if(p.chargesMax) p.charges = p.chargesMax; p.stackable = (p.cat === 'consumable'); return p; } }));
       const list = (typeof MAGIC_ITEMS !== 'undefined') ? MAGIC_ITEMS : [];
-      return list.map(m=>{
+      return campaign.concat(list.map(m=>{
         const meta = MAGIC_META[m.name] || ['', 0, 0, 'magic'];
         return { label:m.name, detail:meta[0], group:'Magic items',
           make:()=>({ name:m.name, cat:meta[3], rarity:meta[0], attune:!!meta[1], weight:meta[2], desc:m.effect, stackable: meta[3]==='consumable' }) };
-      });
+      }));
     }
     return [];
   }
