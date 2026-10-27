@@ -16,5 +16,51 @@ const CUSTOM_MAGIC_ITEMS = [
     "bonus": 0,
     "ranged": true,
     "prof": true
+  },
+  {
+    "id": "cm_1792151572633",
+    "name": "The Slightly better scope",
+    "cat": "magic",
+    "rarity": "Uncommon",
+    "attune": true,
+    "weight": 0.5,
+    "value": "250 gp",
+    "desc": "A finely crafted brass scope with a dark glass lens, its surface etched with tiny silver runes that shift whenever the wielder brings a distant target into focus.\n\n[Far-Sighted] While the scope is mounted on a rifle, the weapon's normal and long ranges are doubled. This benefit doesn't extend to attacks made beyond the weapon's normal maximum range, and it doesn't impose disadvantage on attacks at long range.\n\n[Steady Focus] As a bonus action, you can look through the scope and focus on a creature or object you can see within 300 feet. Until the start of your next turn, you have advantage on Wisdom (Perception) checks made to observe that target, provided you can still see it through the scope.\n\n[Attunement Condition]\nThe Farwatch Lens requires attunement by a creature proficient with firearms. Attunement is completed by mounting the scope onto a rifle and spending 1 hour calibrating its lenses while focusing on a distant target."
+  },
+  {
+    "id": "cm_1793085790488",
+    "name": "Modular Bear Trap",
+    "cat": "weapon",
+    "rarity": "Common",
+    "attune": false,
+    "weight": 15,
+    "value": "25 GP",
+    "desc": "[Trigger] A creature weighing at least 20 lb. steps on the pressure plate.\n[Detection]: DC 13 Wisdom (Perception) check to notice when placed carefully and concealed.\n[Disarming]: DC 13 Dexterity check using thieves' tools or appropriate tools.\n[Escape]: DC 15 Strength check to force the jaws open, or DC 15 Dexterity check using thieves' tools to release the mechanism.\n[Effect]: The triggering creature must succeed on a DC 13 Dexterity saving throw or take 1d6 piercing damage and become restrained by the trap.\n[Restraint]: While restrained, the creature's speed is 0. It cannot move away from the trap until freed. The trap can restrain one Medium or smaller creature at a time.\n[Durability]: AC 15, 15 hit points.",
+    "dmg": "1d6",
+    "dmgType": "",
+    "props": "",
+    "bonus": 0,
+    "ranged": false,
+    "prof": true
+  },
+  {
+    "id": "cm_1793085957622",
+    "name": "Emberstone of Questionable Warmth",
+    "cat": "magic",
+    "rarity": "Uncommon",
+    "attune": false,
+    "weight": 1,
+    "value": "150 GP",
+    "desc": "[Persistent Tepidity]. The Emberstone maintains a temperature of approximately 35°C (95°F) indefinitely, regardless of the surrounding environment. It never becomes hot enough to burn a creature or cold enough to be uncomfortable to hold.\n[Thermal Ambiguity]. The stone remains slightly warm even when submerged in ice water, buried in snow, or placed in a freezing environment. Anyone examining it with Detect Magic identifies a faint aura of transmutation magic but learns nothing further about its purpose.\n[Absolutely Not a Firestarter]. Despite extensive experimentation, the Emberstone cannot ignite tinder, cook food, melt ice, boil water, or meaningfully heat a room. It is, however, consistently warm enough to make someone wonder whether it might."
+  },
+  {
+    "id": "cm_1793086159601",
+    "name": "Hat of Many Spells",
+    "cat": "magic",
+    "rarity": "Uncommon",
+    "attune": true,
+    "weight": 0,
+    "value": "300 GP",
+    "desc": "Cloth patches of various shapes and colors over the hat. While wearing the hat the user can remove one of the patches causing it to become the magical effect it represents. Once the last patch its removed it becomes a common hat. \n\nAttack modifier of +5 - if the spell has a saving throw the DC is 13.\n\nThe hat has the following patches:\n- Detect magic\n- Mage hand\n- Light\n- Guidance\n- Feather fall\n- Alarm\n- Comprehend Language\n- Identify\n- Grease\n- Ray of Frost (1st lvl)"
   }
 ];
