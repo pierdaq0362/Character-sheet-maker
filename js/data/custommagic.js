@@ -62,5 +62,37 @@ const CUSTOM_MAGIC_ITEMS = [
     "weight": 0,
     "value": "300 GP",
     "desc": "Cloth patches of various shapes and colors over the hat. While wearing the hat the user can remove one of the patches causing it to become the magical effect it represents. Once the last patch its removed it becomes a common hat. \n\nAttack modifier of +5 - if the spell has a saving throw the DC is 13.\n\nThe hat has the following patches:\n- Detect magic\n- Mage hand\n- Light\n- Guidance\n- Feather fall\n- Alarm\n- Comprehend Language\n- Identify\n- Grease\n- Ray of Frost (1st lvl)"
+  },
+  {
+    "id": "cm_1793086586888",
+    "name": "Amulet of Jack",
+    "cat": "magic",
+    "rarity": "Uncommon",
+    "attune": false,
+    "weight": 0,
+    "value": "??",
+    "desc": "You have resistance against being frightened.\n\nWhenever you resist being frightened by a creature, you may have that creature make a wisdom saving throw (10+charisma modifier) or become frightened for 1 minute. \n\nShaking the amulet 3 times starts calling a call center:\nSay:\n1. For J\n2. For Z\n3. For ???\n4. For ?????\n5. For ???????"
+  },
+  {
+    "id": "cm_1793086888772",
+    "name": "The Jester's Compass",
+    "cat": "magic",
+    "rarity": "Rare",
+    "attune": true,
+    "weight": 0.5,
+    "value": "????",
+    "desc": "The Jester's Compass is a peculiar magical instrument whose true purpose is not immediately apparent. Unlike an ordinary compass, it does not guide its bearer toward a geographical destination.\n\n[Point of Interest]. While holding the compass, you can use an action to observe its needle. The needle points in the direction of the nearest event, location, or individual that would be of particular interest to ???. \nThe compass does not reveal the nature of the attraction, the distance to its source, or how long it will take to reach it. It simply points the way. \n\n[No Promises of Safety]. The compass has no concern for its bearer's wellbeing. It may point toward a grand opportunity, a fascinating mystery, or a situation in which several people are about to make terrible decisions. The needle does not distinguish between beneficial, dangerous, and catastrophic destinations.\n\n[Unreliable Urgency]. When multiple interesting events are occurring nearby, the needle may twitch, spin, or settle on a direction that leads toward the most entertaining prospect rather than the closest one. The compass offers guidance, not a guarantee that the bearer will understand what they find.\n\n[Attunement Condition]\n\nA creature must carry the compass and spend a short rest examining its face and following the movement of its needle. During this time, the creature must ask the compass a question about where it should go next. The compass attunes itself to the creature once the rest is complete, though it provides no answer to the question beyond its chosen direction."
+  },
+  {
+    "id": "cm_1793087007780",
+    "name": "Headband of Fury",
+    "cat": "magic",
+    "rarity": "Rare",
+    "attune": true,
+    "weight": 0.5,
+    "value": "1000 GP",
+    "desc": "While wearing the headband you can choose any target you see and have them enter Rage. \nIt can only be used once per day.\n\n[Attunement Condition]\n\nThe wearer must spend 1 hour wearing the headband while deliberately recalling a moment of intense anger or frustration. To complete the attunement, the wearer must successfully provoke another creature into expressing genuine anger during this period. The creature does not need to become hostile or violent; a sincere outburst is sufficient.",
+    "chargesMax": 1,
+    "charges": 1
   }
 ];
