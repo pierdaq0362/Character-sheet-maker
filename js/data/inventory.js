@@ -61,6 +61,16 @@
   };
 
   const CATS = { weapon:'⚔️ Weapons', armor:'🛡️ Armor & Shields', magic:'✨ Magic Items', consumable:'🧪 Consumables & Ammo', gear:'🎒 Gear', other:'💰 Other' };
+  const SLOTS = {
+    head:{l:'Head',i:'🪖'}, neck:{l:'Neck',i:'📿'}, back:{l:'Back',i:'🧥'}, body:{l:'Body',i:'🦺'},
+    main:{l:'Main hand',i:'🗡️'}, hands:{l:'Hands',i:'🧤'}, off:{l:'Off hand',i:'🛡️'},
+    ring1:{l:'Ring',i:'💍'}, belt:{l:'Belt',i:'🪢'}, ring2:{l:'Ring',i:'💍'},
+    trinket1:{l:'Trinket',i:'✨'}, feet:{l:'Feet',i:'🥾'}, trinket2:{l:'Trinket',i:'✨'}
+  };
+  const SLOT_TYPES = { head:['head'], neck:['neck'], back:['back'], body:['body'], hands:['hands'], belt:['belt'], feet:['feet'],
+    ring:['ring1','ring2'], hand:['main','off'], shield:['off'], trinket:['trinket1','trinket2'], none:[] };
+  const SLOT_TYPE_LABELS = { auto:'Auto-detect', head:'Head', neck:'Neck', back:'Back (cloak)', body:'Body (armor/robes)', hands:'Hands', belt:'Belt', feet:'Feet',
+    ring:'Ring', hand:'Held in a hand', shield:'Shield (off hand)', trinket:'Trinket / carried', none:'Not wearable' };
   const RARITIES = ['Common','Uncommon','Rare','Very Rare','Legendary','Artifact'];
 
   let state = { items: [], maxCarry: '' };
@@ -80,6 +90,7 @@
     const f = field();
     try { const s = JSON.parse((f && f.value) || ''); if(s && Array.isArray(s.items)) state = { items:s.items, maxCarry:s.maxCarry||'' }; else state = {items:[], maxCarry:''}; }
     catch(e){ state = {items:[], maxCarry:''}; }
+    try { normalizeSlots(); } catch(e){}
   }
   function abilityMod(k){ try { return currentAbilityMod(k); } catch(e){ return 0; } }
   function profB(){ try { return profBonusFor(document.querySelector('[name="classLevel"]').value); } catch(e){ return 2; } }
@@ -127,6 +138,7 @@
   // ---------------- text helpers ----------------
   function statLine(it){
     const s = [];
+    if(it.inProgress) s.push("🔨 In progress — can't be used yet");
     if(it.cat === 'weapon'){
       const b = num(it.bonus);
       s.push(`${esc(it.dmg||'—')}${b?' '+fmtS(b):''} ${esc(it.dmgType||'')}`.trim());
@@ -151,6 +163,14 @@
   const css = document.createElement('style');
   css.textContent = `
     .inv-drawer{width:min(500px,100vw);}
+    .inv-slots{display:grid; grid-template-columns:repeat(3,1fr); grid-template-areas:". head ." "neck body back" "main hands off" "ring1 belt ring2" "trinket1 feet trinket2"; gap:6px; margin-bottom:12px;}
+    .slot{border:1.5px dashed var(--line); border-radius:8px; padding:4px 6px; min-height:58px; background:rgba(255,250,240,.55); cursor:pointer; position:relative; font-size:11px; display:flex; flex-direction:column; gap:1px; min-width:0;}
+    .slot .sl{font-size:9px; text-transform:uppercase; letter-spacing:.06em; color:var(--ink-soft);}
+    .slot .ic{font-size:15px; opacity:.5;} .slot b{font-size:11.5px; line-height:1.15; overflow:hidden; text-overflow:ellipsis;}
+    .slot:hover{background:#f3ead6;}
+    .slot.full{border-style:solid; border-color:var(--gold); background:#fff4d6;} .slot.full .ic{opacity:1;}
+    .slot.blocked{opacity:.45; cursor:not-allowed;}
+    .slot .x{position:absolute; top:1px; right:3px; border:none; background:none; cursor:pointer; color:var(--ink-soft); font-size:11px;}
     .inv-cap{background:#fffaf0; border:1px solid var(--line); border-radius:8px; padding:8px 10px; margin-bottom:10px;}
     .inv-cap .bar{height:9px; background:#e6dcc3; border-radius:5px; overflow:hidden; margin:5px 0;}
     .inv-cap .bar>div{height:100%; background:#6b8f3c; transition:width .2s;}
@@ -197,6 +217,7 @@
           <button type="button" id="btnCloseInventory" class="spell-modal-close" aria-label="Close">✕</button></div>
         <div class="spellbook-list">
           <div class="inv-cap" id="invCap"></div>
+          <div id="invSlots"></div>
           <div class="inv-tabs" id="invTabs">
             <button type="button" class="btn small" data-lib="weapon">⚔️ Weapons</button>
             <button type="button" class="btn small" data-lib="armor">🛡️ Armor</button>
@@ -217,6 +238,13 @@
       libTab = b.dataset.lib; renderLib();
     });
     $('invList').addEventListener('click', onListClick);
+    $('invSlots').addEventListener('click', e=>{
+      const x = e.target.closest('[data-unequip]');
+      if(x){ const it = occupant(x.dataset.unequip); if(it){ unequip(it); refresh(); } return; }
+      const t = e.target.closest('[data-slot]'); if(!t) return;
+      const it = occupant(t.dataset.slot);
+      if(it) openDetail(it.id); else openSlotPicker(t.dataset.slot);
+    });
   }
 
   function renderCap(){
@@ -262,11 +290,12 @@
       if(!items.length) return;
       h += `<div class="inv-group">${CATS[cat]}</div>`;
       items.forEach(i=>{
-        const canEq = (cat==='weapon' || cat==='armor' || cat==='magic');
+        const canEq = canEquip(i);
         h += `<div class="inv-row ${i.equipped?'eq':''}" data-id="${i.id}">
-          <div class="nm" data-act="open"><b>${esc(i.name)}</b>${i.attuned?' ✦':''}<div class="sub">${statLine(i) || '&nbsp;'}</div></div>
+          <div class="nm" data-act="open"><b>${esc(i.name)}</b>${i.attuned?' ✦':''}<div class="sub">${statLine(i) || '&nbsp;'}${i.slot ? ' · 📍' + SLOTS[i.slot].l : ''}</div></div>
           <div class="qty"><button data-act="dec">−</button><span>${num(i.qty,1)}</span><button data-act="inc">+</button></div>
           <div class="w">${fmtW(num(i.weight)*Math.max(0,num(i.qty,1)))} lb</div>
+          ${i.inProgress ? '<span class="eqbox" title="Your DM is still working on this item">🔨<br>in progress</span>' : ''}
           ${canEq ? `<label class="eqbox"><input type="checkbox" data-act="eq" ${i.equipped?'checked':''}>${cat==='magic'?'worn':'equip'}</label>` : ''}
         </div>`;
       });
@@ -289,21 +318,146 @@
     refresh();
   }
 
-  function setEquipped(it, on){
-    it.equipped = on;
-    if(on && it.cat === 'armor'){
-      const isShield = it.armorType === 'Shield';
-      state.items.forEach(o=>{ if(o!==it && o.cat==='armor' && ((o.armorType==='Shield') === isShield)) o.equipped = false; });
-      const need = num(it.strReq);
-      if(need && strTotal() < need && typeof showToast === 'function') showToast(`${it.name} needs Str ${need} — your speed drops by 10 ft.`, 'warn');
+  // ---------------- equipment slots ----------------
+  function slotType(it){
+    if(it.slotType && it.slotType !== 'auto' && SLOT_TYPES[it.slotType]) return it.slotType;
+    if(it.cat === 'weapon') return 'hand';
+    if(it.cat === 'armor') return it.armorType === 'Shield' ? 'shield' : 'body';
+    if(it.cat === 'magic'){
+      const n = String(it.name || '').toLowerCase();
+      if(/\bring\b/.test(n)) return 'ring';
+      if(/cloak|cape|mantle/.test(n)) return 'back';
+      if(/boots|shoes|slippers|sandals/.test(n)) return 'feet';
+      if(/amulet|necklace|periapt|pendant|brooch|medallion|talisman/.test(n)) return 'neck';
+      if(/helm|hat\b|crown|circlet|headband|goggles|mask|\bcap\b/.test(n)) return 'head';
+      if(/glove|gauntlet|bracer/.test(n)) return 'hands';
+      if(/belt|girdle/.test(n)) return 'belt';
+      if(/armor|robe/.test(n)) return 'body';
+      if(/wand|rod\b|staff|sword|dagger|bow\b|blade/.test(n)) return 'hand';
+      return 'trinket';
     }
-    if(!on && it.cat === 'magic') { /* worn flag only */ }
+    return 'none';
+  }
+  const twoHanded = it => it.cat === 'weapon' && /two-handed/i.test(it.props || '');
+  function allowedSlots(it){
+    let a = (SLOT_TYPES[slotType(it)] || []).slice();
+    if(twoHanded(it)) a = a.filter(x=>x === 'main');
+    return a;
+  }
+  function canEquip(it){ return !it.inProgress && allowedSlots(it).length > 0; }
+  const occupant = slot => state.items.find(i=>i.slot === slot);
+  function offBlocked(){ const m = occupant('main'); return !!(m && twoHanded(m)); }
+  function unequip(it){ delete it.slot; it.equipped = false; }
+  function autoSlot(it){
+    const a = allowedSlots(it);
+    return a.find(x=>!occupant(x) && !(x === 'off' && offBlocked())) || a[0];
+  }
+  function equipTo(it, slot){
+    const toast = (m,v)=>{ if(typeof showToast === 'function') showToast(m, v); };
+    if(it.inProgress){ toast(`${it.name} is still in progress — it can't be equipped yet.`, 'warn'); return false; }
+    if(!allowedSlots(it).includes(slot)){ toast(`${it.name} doesn't fit the ${SLOTS[slot].l.toLowerCase()} slot.`, 'warn'); return false; }
+    if(slot === 'off' && offBlocked() && occupant('main') !== it){ toast('Your main hand holds a two-handed weapon — free it first.', 'warn'); return false; }
+    unequip(it);
+    const cur = occupant(slot);
+    if(cur){ unequip(cur); toast(`${cur.name} moved back to your pack.`); }
+    if(twoHanded(it)){ const o = occupant('off'); if(o){ unequip(o); toast(`${o.name} moved back to your pack (two-handed weapon).`); } }
+    it.slot = slot; it.equipped = true;
+    const need = num(it.strReq);
+    if(need && strTotal() < need) toast(`${it.name} needs Str ${need} — your speed drops by 10 ft.`, 'warn');
+    return true;
+  }
+  function validateSlot(it){ if(it.slot && !allowedSlots(it).includes(it.slot)) unequip(it); }
+  function normalizeSlots(){
+    state.items.forEach(it=>{
+      if(it.slot && !allowedSlots(it).includes(it.slot)) unequip(it);
+      if(it.slot && state.items.some(o=>o!==it && o.slot === it.slot)) unequip(it);
+    });
+    state.items.forEach(it=>{
+      if(it.equipped && !it.slot){
+        const sl = canEquip(it) ? allowedSlots(it).find(x=>!occupant(x) && !(x === 'off' && offBlocked())) : null;
+        if(sl){ it.slot = sl; } else it.equipped = false;
+      }
+      if(it.slot) it.equipped = true;
+    });
   }
 
-  function refresh(){ persist(); updateAC(); renderCap(); renderList(); }
+  function renderSlots(){
+    const el = $('invSlots'); if(!el) return;
+    const used = Object.keys(SLOTS).filter(k=>occupant(k)).length;
+    const tiles = Object.keys(SLOTS).map(k=>{
+      const it = occupant(k);
+      const blocked = !it && k === 'off' && offBlocked();
+      if(it) return `<div class="slot full" style="grid-area:${k}" data-slot="${k}" title="${esc(it.name)}">
+        <span class="sl">${SLOTS[k].l}</span><span class="ic">${SLOTS[k].i}</span><b>${esc(it.name)}${it.attuned?' ✦':''}</b>
+        <button class="x" data-unequip="${k}" title="Unequip">✕</button></div>`;
+      if(blocked) return `<div class="slot blocked" style="grid-area:${k}"><span class="sl">${SLOTS[k].l}</span><span class="ic">🔒</span><span>two-handed</span></div>`;
+      return `<div class="slot" style="grid-area:${k}" data-slot="${k}"><span class="sl">${SLOTS[k].l}</span><span class="ic">${SLOTS[k].i}</span><span style="color:var(--ink-soft);">free</span></div>`;
+    }).join('');
+    el.innerHTML = `<div style="display:flex; align-items:baseline; margin-bottom:5px;"><b style="font-size:12px; flex:1;">🧍 Equipment slots</b><span style="font-size:11px; color:var(--ink-soft);">${used} / ${Object.keys(SLOTS).length} used</span></div><div class="inv-slots">${tiles}</div>`;
+  }
+
+  function closeSlotPicker(){ const o = $('invSlotPicker'); if(o) o.remove(); }
+  function openSlotPicker(slot){
+    closeSlotPicker();
+    const cands = state.items.filter(i=>!i.slot && canEquip(i) && allowedSlots(i).includes(slot));
+    const o = document.createElement('div');
+    o.id = 'invSlotPicker'; o.className = 'spell-modal-overlay'; o.style.zIndex = 330;
+    o.innerHTML = `<div class="spell-modal-box" style="width:min(420px,94vw);">
+      <button type="button" class="spell-modal-close" id="invSpClose" aria-label="Close">✕</button>
+      <h3>${SLOTS[slot].i} ${SLOTS[slot].l}</h3>
+      <div class="spell-modal-body">${cands.length ? cands.map(i=>`<div class="inv-lib-item" data-id="${i.id}"><span class="n">${esc(i.name)}</span><span class="d">${statLine(i).replace(/<[^>]+>/g,'')}</span></div>`).join('')
+        : '<div style="font-size:12.5px; color:var(--ink-soft);">Nothing in your inventory fits this slot. Add an item first (or set an item\'s slot in its details).</div>'}</div></div>`;
+    document.body.appendChild(o);
+    o.addEventListener('click', e=>{
+      if(e.target === o || e.target.id === 'invSpClose') return closeSlotPicker();
+      const r = e.target.closest('.inv-lib-item'); if(!r) return;
+      const it = state.items.find(i=>i.id === r.dataset.id);
+      if(it && equipTo(it, slot)){ closeSlotPicker(); refresh(); }
+    });
+  }
+
+  function setEquipped(it, on){
+    if(!on){ unequip(it); return; }
+    const sl = autoSlot(it);
+    if(!sl || !equipTo(it, sl)) it.equipped = false;
+  }
+
+  function allCustom(){
+    return (typeof window.getMergedCustomMagic === 'function') ? window.getMergedCustomMagic()
+      : ((typeof CUSTOM_MAGIC_ITEMS !== 'undefined') ? CUSTOM_MAGIC_ITEMS : []);
+  }
+  // Keep inventory copies of DM items in step with the DM's list: lock items
+  // marked "in progress", and fill in the final stats once the DM completes them.
+  function syncCustom(){
+    const all = allCustom(); const finished = []; let changed = false;
+    state.items.forEach(it=>{
+      if(!it.customId) return;
+      const lib = all.find(c=>c.id === it.customId); if(!lib) return;
+      if(lib.inProgress){
+        if(!it.inProgress){ it.inProgress = true; changed = true; }
+        if(it.equipped || it.attuned || it.slot){ unequip(it); it.attuned = false; changed = true; }
+      } else if(it.inProgress){
+        const keep = { id:1, qty:1, equipped:1, attuned:1, charges:1, customId:1, desc:1, libDesc:1 };
+        Object.keys(lib).forEach(k=>{ if(!keep[k]) it[k] = lib[k]; });
+        delete it.inProgress;
+        if(!it.desc || it.desc === it.libDesc) it.desc = lib.desc || '';
+        it.libDesc = lib.desc || '';
+        if(lib.chargesMax) it.charges = lib.chargesMax;
+        finished.push(it.name); changed = true;
+      }
+    });
+    if(changed) persist();
+    return finished;
+  }
+  function announceFinished(){
+    const done = syncCustom();
+    if(done.length && typeof showToast === 'function') showToast(`🔨 Finished by your DM: ${done.join(', ')} — now ready to use!`);
+  }
+
+  function refresh(){ persist(); updateAC(); renderCap(); renderSlots(); renderList(); }
 
   // ---------------- library ----------------
-  function libEntries(tab){
+  function baseEntries(tab){
     if(tab === 'weapon'){
       const out = [];
       Object.entries(WEAPON_LIB).forEach(([grp, arr])=> arr.forEach(s=>{
@@ -326,8 +480,8 @@
     if(tab === 'magic'){
       const custom = (typeof window.getMergedCustomMagic === 'function') ? window.getMergedCustomMagic()
         : ((typeof CUSTOM_MAGIC_ITEMS !== 'undefined') ? CUSTOM_MAGIC_ITEMS : []);
-      const campaign = custom.map(c=>({ label:c.name, detail:[c.rarity, c.attune?'attunement':''].filter(Boolean).join(' · '), group:'✨ Campaign items (from your DM)',
-        make:()=>{ const p = JSON.parse(JSON.stringify(c)); delete p.id; if(p.chargesMax) p.charges = p.chargesMax; p.stackable = (p.cat === 'consumable'); return p; } }));
+      const campaign = custom.filter(c=>c.rarity).map(c=>({ label:(c.inProgress?'🔨 ':'')+c.name, detail:[c.rarity, c.attune?'attunement':''].filter(Boolean).join(' · '), group:'✨ Campaign items (from your DM)',
+        make:()=>{ const p = JSON.parse(JSON.stringify(c)); p.customId = c.id; p.libDesc = c.desc || ''; delete p.id; if(p.chargesMax) p.charges = p.chargesMax; if(p.stackable === undefined) p.stackable = (p.cat === 'consumable'); return p; } }));
       const list = (typeof MAGIC_ITEMS !== 'undefined') ? MAGIC_ITEMS : [];
       return campaign.concat(list.map(m=>{
         const meta = MAGIC_META[m.name] || ['', 0, 0, 'magic'];
@@ -336,6 +490,17 @@
       }));
     }
     return [];
+  }
+
+  function libEntries(tab){
+    const base = baseEntries(tab);
+    if(tab === 'magic' || !['weapon','armor','gear'].includes(tab)) return base;
+    const all = (typeof window.getMergedCustomMagic === 'function') ? window.getMergedCustomMagic()
+      : ((typeof CUSTOM_MAGIC_ITEMS !== 'undefined') ? CUSTOM_MAGIC_ITEMS : []);
+    const ok = c => !c.rarity && (tab === 'weapon' ? c.cat === 'weapon' : tab === 'armor' ? c.cat === 'armor' : ['gear','consumable','other'].includes(c.cat));
+    const extra = all.filter(ok).map(c=>({ label:(c.inProgress?'🔨 ':'')+c.name, detail: statLine(c).replace(/<[^>]+>/g,'') || `${c.weight||0} lb`, group:'✨ Campaign items (from your DM)',
+      make:()=>{ const p = JSON.parse(JSON.stringify(c)); p.customId = c.id; p.libDesc = c.desc || ''; delete p.id; if(p.stackable === undefined) p.stackable = (c.cat==='gear'||c.cat==='consumable'); return p; } }));
+    return extra.concat(base);
   }
 
   function addItem(proto){
@@ -406,6 +571,7 @@
       <textarea id="invDDesc" rows="5" style="width:100%; margin-bottom:10px;"></textarea>
       <div style="display:flex; gap:8px; flex-wrap:wrap; justify-content:flex-end;">
         <button type="button" class="btn small secondary" id="invDDelete">🗑 Remove</button>
+        <button type="button" class="btn small secondary" id="invDUnequip" style="display:none;">↩ Unequip</button>
         <button type="button" class="btn small" id="invDAttack" style="display:none;">→ Add to Attacks</button>
         <button type="button" class="btn small" id="invDDone">Done</button>
       </div></div>`;
@@ -418,6 +584,7 @@
       state.items = state.items.filter(x=>x!==it); closeDetail(); refresh();
     });
     $('invDAttack').addEventListener('click', ()=> addToAttacks(it));
+    $('invDUnequip').addEventListener('click', ()=>{ unequip(it); refresh(); drawDetail(it); });
     $('invDDesc').value = it.desc || '';
     $('invDDesc').addEventListener('input', e=>{ it.desc = e.target.value; persist(); });
     drawDetail(it);
@@ -437,7 +604,8 @@
     }
     stat.innerHTML = `<div><b>${statLine(it) || 'No stats'}</b></div>${extra}
       <div style="font-size:11.5px; color:var(--ink-soft);">${num(it.qty,1)} × ${fmtW(num(it.weight))} lb = ${fmtW(total)} lb${it.value ? ' · ' + esc(it.value) : ''}</div>`;
-    $('invDAttack').style.display = it.cat === 'weapon' ? '' : 'none';
+    $('invDAttack').style.display = (it.cat === 'weapon' && !it.inProgress) ? '' : 'none';
+    $('invDUnequip').style.display = it.slot ? '' : 'none';
 
     const f = (label, key, type='text', extra='') => `<label>${label}<input class="plain-input" data-k="${key}" type="${type}" ${extra} value="${esc(it[key]==null?'':it[key])}"></label>`;
     const chk = (label, key) => `<label class="chk"><input type="checkbox" data-k="${key}" ${it[key]?'checked':''}> ${label}</label>`;
@@ -445,7 +613,8 @@
       ${f('Name','name')}
       <label>Category<select class="plain-input" data-k="cat">${Object.entries(CATS).map(([k,v])=>`<option value="${k}" ${k===(it.cat||'other')?'selected':''}>${v}</option>`).join('')}</select></label>
       ${f('Quantity','qty','number','min="0"')}${f('Weight each (lb)','weight','number','step="0.25" min="0"')}
-      ${f('Value','value')}</div>`;
+      ${f('Value','value')}
+      <label>Equipment slot<select class="plain-input" data-k="slotType">${Object.entries(SLOT_TYPE_LABELS).map(([k,v])=>`<option value="${k}" ${k===(it.slotType||'auto')?'selected':''}>${v}</option>`).join('')}</select></label></div>`;
     if(it.cat === 'weapon'){
       h += `<div class="inv-grid">${f('Damage dice','dmg')}${f('Damage type','dmgType')}
         ${f('Properties','props')}${f('Magic bonus (+N)','bonus','number')}
@@ -458,7 +627,7 @@
         ${f('Str required','strReq','number')}${chk('Stealth disadvantage','stealthDis')}</div>`;
     } else if(it.cat === 'magic' || it.cat === 'consumable'){
       h += `<div class="inv-grid"><label>Rarity<select class="plain-input" data-k="rarity"><option value=""></option>${RARITIES.map(r=>`<option ${r===it.rarity?'selected':''}>${r}</option>`).join('')}</select></label>
-        ${chk('Requires attunement','attune')}${it.attune ? chk('Currently attuned','attuned') : ''}
+        ${chk('Requires attunement','attune')}${it.attune && !it.inProgress ? chk('Currently attuned','attuned') : ''}
         ${f('Charges','charges','number','min="0"')}${f('Max charges','chargesMax','number','min="0"')}</div>`;
     }
     const box = $('invDFields');
@@ -480,9 +649,9 @@
       if(n > 3){ it.attuned = false; inp.checked = false; if(typeof showToast==='function') showToast('You can only be attuned to 3 items at once.', 'warn'); }
     }
     $('invDTitle').textContent = it.name;
-    persist(); updateAC(); renderCap(); renderList();
+    validateSlot(it); persist(); updateAC(); renderCap(); renderSlots(); renderList();
     // re-draw the stat card (and, for structural fields, the form) without stealing focus
-    if(committed && (k === 'cat' || k === 'armorType' || k === 'attune')) drawDetail(it);
+    if(committed && (k === 'cat' || k === 'armorType' || k === 'attune' || k === 'slotType')) drawDetail(it);
     else {
       const keep = document.activeElement;
       const tmp = $('invDFields'); void tmp;
@@ -508,6 +677,7 @@
   }
 
   function addToAttacks(it){
+    if(it.inProgress) return;
     const finesse = /finesse/i.test(it.props||'');
     const mod = finesse ? Math.max(abilityMod('str'), abilityMod('dex')) : (it.ranged ? abilityMod('dex') : abilityMod('str'));
     const b = num(it.bonus);
@@ -521,7 +691,7 @@
   }
 
   // ---------------- open / close / init ----------------
-  function openPanel(){ loadState(); renderLib(); refresh(); $('inventoryOverlay').style.display = 'flex'; }
+  function openPanel(){ loadState(); announceFinished(); renderLib(); refresh(); $('inventoryOverlay').style.display = 'flex'; }
   function closePanel(){ const o = $('inventoryOverlay'); if(o) o.style.display = 'none'; }
 
   function init(){
@@ -532,15 +702,15 @@
     // summary line above the currency row
     const cur = document.querySelector('.currency-row');
     if(cur && !$('invSummary')){ const s = document.createElement('div'); s.id = 'invSummary'; cur.parentNode.insertBefore(s, cur); }
-    renderSummary(); updateAC();
-    document.addEventListener('keydown', e=>{ if(e.key === 'Escape'){ if($('invDetailOverlay')) closeDetail(); else closePanel(); } });
+    announceFinished(); renderSummary(); updateAC();
+    document.addEventListener('keydown', e=>{ if(e.key === 'Escape'){ if($('invSlotPicker')) closeSlotPicker(); else if($('invDetailOverlay')) closeDetail(); else closePanel(); } });
 
     // keep capacity / AC live as the sheet changes
     const sheet = $('sheet');
     if(sheet) sheet.addEventListener('input', ()=>{ renderSummary(); if(acManaged) updateAC(); const ov = $('inventoryOverlay'); if(ov && ov.style.display !== 'none') updateCapBar(); });
 
     const fileInput = $('fileInput');
-    if(fileInput) fileInput.addEventListener('change', ()=> setTimeout(()=>{ loadState(); acManaged = state.items.some(i=>i.cat==='armor' && i.equipped); renderSummary(); }, 400));
+    if(fileInput) fileInput.addEventListener('change', ()=> setTimeout(()=>{ loadState(); announceFinished(); acManaged = state.items.some(i=>i.cat==='armor' && i.equipped); renderSummary(); }, 400));
     const newBtn = $('btnNew');
     if(newBtn) newBtn.addEventListener('click', ()=>{
       const n = document.querySelector('[name="charName"]');

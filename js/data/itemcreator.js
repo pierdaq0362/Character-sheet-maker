@@ -1,7 +1,8 @@
 // ============================================================================
-// DM Magic Item Creator — a card inside DM Mode. Create items with stats,
-// rarity and a description; "Save draft" keeps it private, "Submit" publishes it:
-//   • it appears in the Magic tab of YOUR inventory immediately, and
+// DM Item Creator — a card inside DM Mode. Create magic items AND ordinary
+// weapons, armor, shields, gear and treasure, with stats and a description; "Save draft" keeps it private, "Submit" publishes it:
+//   • it appears in your inventory library immediately (items with a rarity go
+//     in the Magic tab; plain weapons/armor/gear go in their own tabs), and
 //   • a ready-to-upload js/data/custommagic.js is downloaded — once that file
 //     is uploaded to the site's repo, every player gets the items.
 // (A static site has no server, so that one upload is the "publish" step.)
@@ -11,7 +12,7 @@
   const LS_OVR = 'dnd5e_dm_items_overrides_v1';   // {added:{id:item}, deleted:[id]}
   const LS_DRAFTS = 'dnd5e_dm_items_drafts_v1';   // [item]
   const RARITIES = ['Common','Uncommon','Rare','Very Rare','Legendary','Artifact'];
-  const TYPES = { magic:'Wondrous / other item', weapon:'Weapon', armor:'Armor', shield:'Shield', consumable:'Potion / consumable' };
+  const TYPES = { weapon:'Weapon', armor:'Armor', shield:'Shield', gear:'Adventuring gear / tool', consumable:'Potion / consumable / ammo', magic:'Wondrous item', other:'Other / treasure' };
 
   const esc = s => String(s==null?'':s).replace(/[&<>"]/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
   const num = (v,d=0)=>{ const n = parseFloat(v); return isNaN(n)?d:n; };
@@ -79,16 +80,16 @@
     const items = merged();
     const drafts = lsGet(LS_DRAFTS, []);
     const pend = pendingCount();
-    let h = `<h2>✨ Magic Item Creator
+    let h = `<h2>🛠 Item Creator
       <button type="button" class="btn small" id="icNew" style="margin-left:auto; align-self:center;">+ New Item</button></h2>`;
     if(pend) h += `<div class="ic-banner">⚠ <b>${pend} change${pend>1?'s':''} not live for players yet.</b> Upload the downloaded <code>custommagic.js</code> to <code>js/data/</code> in your GitHub repo.
       <div style="margin-top:6px;"><button type="button" class="btn small" id="icDownload">⬇ Download custommagic.js</button></div></div>`;
     h += `<div class="ic-sub">Published items (${items.length})</div>`;
-    h += items.length ? items.map(i=>`<div class="ic-row" data-id="${esc(i.id)}"><span class="nm">${esc(i.name)}</span><span class="rar">${esc(i.rarity||'')} · ${esc(TYPES[typeKey(i)]||'')}</span>
+    h += items.length ? items.map(i=>`<div class="ic-row" data-id="${esc(i.id)}"><span class="nm">${i.inProgress?'🔨 ':''}${esc(i.name)}</span><span class="rar">${i.inProgress?'In progress · ':''}${esc(i.rarity||'Mundane')} · ${esc(TYPES[typeKey(i)]||'')}</span>
         <button data-act="edit" title="Edit">✎</button><button data-act="del" title="Delete">🗑</button></div>`).join('')
       : '<div style="font-size:12px; color:var(--ink-soft);">No campaign items yet.</div>';
     if(drafts.length){
-      h += `<div class="ic-sub">Drafts (${drafts.length}) — private</div>` + drafts.map(i=>`<div class="ic-row" data-id="${esc(i.id)}" data-draft="1"><span class="nm">${esc(i.name||'(unnamed)')}</span><span class="rar">${esc(i.rarity||'')}</span>
+      h += `<div class="ic-sub">Drafts (${drafts.length}) — private</div>` + drafts.map(i=>`<div class="ic-row" data-id="${esc(i.id)}" data-draft="1"><span class="nm">${esc(i.name||'(unnamed)')}</span><span class="rar">${esc(i.rarity||'Mundane')}</span>
         <button data-act="edit" title="Edit">✎</button><button data-act="del" title="Delete">🗑</button></div>`).join('');
     }
     card.innerHTML = h;
@@ -122,18 +123,22 @@
   function openForm(item, isDraft){
     closeForm();
     const it = item ? JSON.parse(JSON.stringify(item)) : { id:`cm_${Date.now()}`, cat:'magic', rarity:'Uncommon', weight:0, desc:'' };
+    if(item) delete it._new;
     const o = document.createElement('div');
     o.id = 'icFormOverlay'; o.className = 'spell-modal-overlay'; o.style.zIndex = 340;
     o.innerHTML = `<div class="spell-modal-box ic-form">
       <button type="button" class="spell-modal-close" id="icClose" aria-label="Close">✕</button>
-      <h3>${item ? 'Edit' : 'New'} magic item</h3>
+      <h3>${item ? 'Edit' : 'New'} item</h3>
       <div class="ic-grid">
         <label class="full">Name<input class="plain-input" id="icName"></label>
         <label>Type<select class="plain-input" id="icType">${Object.entries(TYPES).map(([k,v])=>`<option value="${k}">${v}</option>`).join('')}</select></label>
-        <label>Rarity<select class="plain-input" id="icRarity">${RARITIES.map(r=>`<option>${r}</option>`).join('')}</select></label>
+        <label>Rarity<select class="plain-input" id="icRarity"><option value="">Mundane (non-magic)</option>${RARITIES.map(r=>`<option>${r}</option>`).join('')}</select></label>
         <label>Weight (lb)<input class="plain-input" id="icWeight" type="number" step="0.25" min="0"></label>
         <label>Value<input class="plain-input" id="icValue" placeholder="e.g. 500 gp"></label>
         <label class="chk"><input type="checkbox" id="icAttune"> Requires attunement</label>
+        <label class="chk"><input type="checkbox" id="icStack"> Stackable (quantity)</label>
+        <label>Equipment slot<select class="plain-input" id="icSlot"><option value="auto">Auto-detect</option><option value="head">Head</option><option value="neck">Neck</option><option value="back">Back (cloak)</option><option value="body">Body (armor/robes)</option><option value="hands">Hands</option><option value="belt">Belt</option><option value="feet">Feet</option><option value="ring">Ring</option><option value="hand">Held in a hand</option><option value="shield">Shield (off hand)</option><option value="trinket">Trinket / carried</option><option value="none">Not wearable</option></select></label>
+        <label class="chk full"><input type="checkbox" id="icProg"> 🔨 In progress — players can see it, but can't equip or use it yet</label>
         <label>Max charges (0 = none)<input class="plain-input" id="icCharges" type="number" min="0"></label>
       </div>
       <div id="icWeaponBox" class="ic-grid">
@@ -166,7 +171,10 @@
     // fill
     $('icName').value = it.name || '';
     $('icType').value = typeKey(it);
-    $('icRarity').value = it.rarity || 'Uncommon';
+    $('icRarity').value = (it.rarity === undefined) ? 'Uncommon' : it.rarity;
+    $('icStack').checked = !!it.stackable;
+    $('icProg').checked = !!it.inProgress;
+    $('icSlot').value = it.slotType || 'auto';
     $('icWeight').value = it.weight ?? 0;
     $('icValue').value = it.value || '';
     $('icAttune').checked = !!it.attune;
@@ -187,6 +195,9 @@
       $('icStr').parentElement.style.display = t === 'shield' ? 'none' : '';
     };
     $('icType').addEventListener('change', ()=>{
+      const tv = $('icType').value;
+      if(tv === 'gear' || tv === 'other'){ $('icRarity').value = ''; $('icStack').checked = (tv === 'gear'); }
+      if(tv === 'consumable') $('icStack').checked = true;
       if($('icType').value === 'shield' && num($('icAc').value) > 3) $('icAc').value = 2;
       if($('icType').value === 'armor' && num($('icAc').value) < 5) $('icAc').value = 11;
       toggle();
@@ -196,7 +207,7 @@
     function collect(){
       const t = $('icType').value;
       const out = { id: it.id, name: $('icName').value.trim(), cat: (t === 'shield' ? 'armor' : t), rarity: $('icRarity').value,
-        attune: $('icAttune').checked, weight: num($('icWeight').value), value: $('icValue').value.trim(), desc: $('icDesc').value };
+        attune: !!$('icRarity').value && $('icAttune').checked, stackable: $('icStack').checked, inProgress: $('icProg').checked, slotType: $('icSlot').value === 'auto' ? undefined : $('icSlot').value, weight: num($('icWeight').value), value: $('icValue').value.trim(), desc: $('icDesc').value };
       const cm = Math.max(0, Math.round(num($('icCharges').value)));
       if(cm){ out.chargesMax = cm; out.charges = cm; }
       if(t === 'weapon') Object.assign(out, { dmg:$('icDmg').value.trim(), dmgType:$('icDmgType').value.trim(), props:$('icProps').value.trim(), bonus:num($('icBonus').value), ranged:$('icRanged').checked, prof:true });
