@@ -139,5 +139,20 @@ const CUSTOM_MAGIC_ITEMS = [
     "desc": "[Description]\nCarved from a single piece of dark, weathered wood, this mask features an expression that seems to shift subtly whenever nobody is looking directly at it. Its smooth surface has no openings for the eyes or mouth, yet the wearer can see and breathe perfectly while wearing it. Small, intricate carvings decorate its edges, resembling faces that have been stretched, twisted, and layered over one another.\n\n[Properties]\n- [Borrowed Appearance] While wearing the mask, you can use an action to cast Disguise Self without expending a spell slot. The spell follows its normal rules and lasts for 1 hour.\n- [Limited Charges] The mask has 3 charges and regains all expended charges daily at dawn. Each casting of Disguise Self consumes 1 charge.\n- [Unmasking] The illusion ends early if you use an action to remove the mask. The mask cannot be removed against your will while you are attuned to it, though it can still be dispelled by Dispel Magic.\n[Attunement Condition] You must wear the mask for 1 hour while looking at your reflection, imagining a face other than your own. The attunement is complete when you can no longer remember, for a brief moment, what your unmasked reflection looks like.",
     "chargesMax": 3,
     "charges": 3
+  },
+  {
+    "id": "cm_1793701213012",
+    "name": "Jack's Potion of Second Wind",
+    "cat": "magic",
+    "rarity": "Common",
+    "attune": false,
+    "stackable": false,
+    "inProgress": false,
+    "slotType": "none",
+    "weight": 0.5,
+    "value": "50 GP",
+    "desc": "When you drink this potion, you regain 2d4 + 2 hit points. It tastes like citrus and honey. \n[Properties]\n- Drinking or administering the potion requires an action.\n- The potion loses its magical properties once consumed.",
+    "chargesMax": 1,
+    "charges": 1
   }
 ];
