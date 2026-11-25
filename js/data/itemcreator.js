@@ -62,10 +62,10 @@
   // ---------------- UI ----------------
   const css = document.createElement('style');
   css.textContent = `
-    .ic-row{display:flex; align-items:center; gap:8px; background:#fffaf0; border:1px solid var(--line); border-radius:7px; padding:6px 9px; margin-bottom:5px; font-size:13px;}
+    .ic-row{display:flex; align-items:center; gap:8px; background:var(--surface); border:1px solid var(--line); border-radius:7px; padding:6px 9px; margin-bottom:5px; font-size:13px;}
     .ic-row .nm{flex:1 1 auto; font-weight:700;} .ic-row .rar{font-size:10.5px; color:var(--ink-soft); font-family:'JetBrains Mono',monospace;}
     .ic-row button{border:none; background:none; cursor:pointer; color:var(--ink-soft); font-size:12px;}
-    .ic-banner{background:#fff1d0; border:1px solid var(--gold); border-radius:7px; padding:8px 10px; margin-bottom:10px; font-size:12.5px;}
+    .ic-banner{background:var(--highlight); border:1px solid var(--gold); border-radius:7px; padding:8px 10px; margin-bottom:10px; font-size:12.5px;}
     .ic-form{width:min(560px,94vw); max-height:92vh; overflow:auto;}
     .ic-grid{display:grid; grid-template-columns:1fr 1fr; gap:7px; margin-bottom:8px;}
     .ic-grid label{font-size:10.5px; display:flex; flex-direction:column; gap:2px; color:var(--ink-soft);}

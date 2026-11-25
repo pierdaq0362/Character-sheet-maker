@@ -21,7 +21,7 @@
     .dice-inputs label{font-size:11px; display:flex; flex-direction:column; gap:2px; flex:1;}
     .dice-inputs input{width:100%;}
     .dice-mode{display:flex; gap:12px; font-size:12.5px; margin-bottom:10px;}
-    .dice-big{border:1px solid var(--line); border-radius:8px; background:#fffaf0; padding:10px; margin-bottom:12px; text-align:center; min-height:64px;}
+    .dice-big{border:1px solid var(--line); border-radius:8px; background:var(--surface); padding:10px; margin-bottom:12px; text-align:center; min-height:64px;}
     .dice-big .num{font-family:'Cinzel',serif; font-size:34px; font-weight:800; line-height:1.1;}
     .dice-big .det{font-size:11.5px; color:var(--ink-soft); font-family:'JetBrains Mono',monospace;}
     .dice-big.crit .num{color:#2e7d32;} .dice-big.fumble .num{color:var(--burgundy);}
